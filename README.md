@@ -1,12 +1,9 @@
 # Flowlib
 
-Flowlib is a JavaScript engine for code-driven diagrams, live visual graph editing, and animation. It is meant to grow toward a Manim-like authoring model while also supporting interactive, non-rendered-live canvases for flow charts, knowledge graphs, mind maps, whiteboards, state machines, and code maps.
+Flowlib is a dependency free javascript library for live visual graphs, diagrams and animations inspired by manim. It has the following capabilities: 
 
-The current repository is an initial engine slice:
-
-- Dependency-free ES modules for browser embeddability.
 - A scene graph with transformable nodes, shape primitives, 2D/3D cameras, and update hooks.
-- A timeline/tween animation core with deterministic stepping.
+- A timeline/tween animation core.
 - Diagram data structures for nodes, edges, transactions, and serialization.
 - Built-in layered, force, and mind-map layout implementations.
 - Manim-style `GraphDiagram` and `DiGraph` builders with custom circular, spring, tree, partite, shell, spiral, grid, random, and manual layouts.
