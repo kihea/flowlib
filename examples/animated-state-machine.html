@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flowlib Animated State Machine</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #f6f8fb;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+
+      canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script type="module">
+      import {
+        Canvas2DRenderer,
+        CircleNode,
+        LineNode,
+        Scene,
+        TextNode,
+        Timeline,
+        pulse,
+        traceBetween
+      } from "../src/index.js";
+
+      const canvas = document.querySelector("#canvas");
+      const scene = new Scene({ background: "#f6f8fb" });
+      const renderer = new Canvas2DRenderer(canvas);
+      const timeline = new Timeline({ autoplay: true, loop: true });
+
+      const idle = state("Idle", -220, 40, "#dbeafe");
+      const loading = state("Loading", 0, -150, "#dcfce7");
+      const done = state("Done", 220, 40, "#fae8ff");
+      const transitions = [
+        { from: idle, to: loading, label: "request", at: 0 },
+        { from: loading, to: done, label: "resolve", at: 0.8 },
+        { from: done, to: idle, label: "reset", at: 1.6 }
+      ];
+      const transitionDuration = 0.72;
+      const activeLine = new LineNode({
+        points: [],
+        opacity: 0,
+        style: { stroke: "#0f766e", strokeWidth: 5, markerEnd: "arrow" }
+      });
+      const marker = new CircleNode({
+        radius: 9,
+        style: { fill: "#0f766e", stroke: "#ffffff", strokeWidth: 3 }
+      });
+      const label = new TextNode({
+        text: "",
+        x: 0,
+        y: 210,
+        fontSize: 17,
+        fontWeight: 650,
+        style: { fill: "#0f172a" }
+      });
+
+      scene.add(
+        edge(idle, loading),
+        edge(loading, done),
+        edge(done, idle),
+        activeLine,
+        idle.group,
+        loading.group,
+        done.group,
+        marker,
+        label
+      );
+
+      for (const transition of transitions) {
+        pulse(timeline, transition.from.circle, {
+          at: transition.at,
+          duration: 0.35,
+          scale: 1.12,
+          ease: "outCubic"
+        });
+        traceBetween(timeline, marker, transition.from.circle, transition.to.circle, {
+          at: transition.at,
+          duration: transitionDuration
+        });
+      }
+      timeline.duration = 2.45;
+
+      let last = performance.now();
+      function frame(now) {
+        const dt = Math.min(0.1, (now - last) / 1000);
+        last = now;
+        timeline.step(dt);
+        updateTransitionTrace();
+        scene.step(dt);
+        renderer.resize();
+        renderer.render(scene);
+        requestAnimationFrame(frame);
+      }
+
+      function state(label, x, y, fill) {
+        const group = new CircleNode({
+          x,
+          y,
+          radius: 46,
+          style: { fill, stroke: "#0f172a", strokeWidth: 2 }
+        });
+        const text = new TextNode({ text: label, fontSize: 15, style: { fill: "#0f172a" } });
+        group.add(text);
+        return { group, circle: group, label };
+      }
+
+      function edge(from, to) {
+        return new LineNode({
+          points: edgePoints(from.circle, to.circle),
+          style: { stroke: "#64748b", strokeWidth: 2, markerEnd: "arrow" }
+        });
+      }
+
+      function edgePoints(from, to) {
+        const dx = to.position.x - from.position.x;
+        const dy = to.position.y - from.position.y;
+        const length = Math.hypot(dx, dy) || 1;
+        const nx = dx / length;
+        const ny = dy / length;
+        return [
+          { x: from.position.x + nx * from.radius, y: from.position.y + ny * from.radius },
+          { x: to.position.x - nx * to.radius, y: to.position.y - ny * to.radius }
+        ];
+      }
+
+      function updateTransitionTrace() {
+        const time = timeline.time % timeline.duration;
+        const transition = transitions.find((item) => time >= item.at && time <= item.at + transitionDuration);
+        if (!transition) {
+          activeLine.opacity = 0;
+          return;
+        }
+        activeLine.opacity = 1;
+        activeLine.setPoints(edgePoints(transition.from.circle, transition.to.circle));
+        label.text = `${transition.from.label} -> ${transition.to.label}: ${transition.label}`;
+      }
+
+      requestAnimationFrame(frame);
+    </script>
+  </body>
+</html>

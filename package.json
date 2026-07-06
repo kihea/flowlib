@@ -1,0 +1,38 @@
+{
+  "name": "@flowlib/engine",
+  "version": "0.1.0",
+  "description": "A coding-focused JavaScript engine for diagrams, live graph editing, and animation.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.js",
+    "./core": "./src/core/index.js",
+    "./curves": "./src/curves/index.js",
+    "./fonts": "./src/fonts/index.js",
+    "./scene": "./src/scene/index.js",
+    "./animation": "./src/animation/index.js",
+    "./diagrams": "./src/diagrams/index.js",
+    "./examples": "./src/examples/index.js",
+    "./graphing": "./src/graphing/index.js",
+    "./live": "./src/live/index.js",
+    "./render": "./src/render/index.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/index.js",
+    "dev": "node scripts/serve-examples.js"
+  },
+  "keywords": [
+    "diagram",
+    "animation",
+    "flowchart",
+    "graph",
+    "canvas",
+    "webgl",
+    "visualization"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

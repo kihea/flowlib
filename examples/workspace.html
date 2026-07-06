@@ -1,0 +1,1682 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flowlib Workspace</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background: #f6f8fb;
+        color: #111827;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+        overflow: hidden;
+      }
+
+      aside {
+        min-width: 0;
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        gap: 14px;
+        padding: 14px;
+        border-right: 1px solid #d8e0ea;
+        background: #ffffff;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      aside > * {
+        min-width: 0;
+      }
+
+      main {
+        min-width: 0;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      header,
+      footer {
+        min-height: 46px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-color: #d8e0ea;
+        background: #ffffff;
+      }
+
+      header {
+        border-bottom: 1px solid #d8e0ea;
+      }
+
+      footer {
+        border-top: 1px solid #d8e0ea;
+        color: #475569;
+        font-size: 13px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 18px;
+      }
+
+      h2 {
+        font-size: 13px;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0;
+      }
+
+      label {
+        min-width: 0;
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+        color: #334155;
+      }
+
+      select,
+      input,
+      button {
+        min-width: 0;
+        min-height: 34px;
+        border: 1px solid #bdc8d5;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #0f172a;
+        font: inherit;
+        max-width: 100%;
+      }
+
+      select {
+        width: 100%;
+        padding: 0 8px;
+      }
+
+      input {
+        width: 100%;
+        padding: 0 8px;
+      }
+
+      button {
+        width: 100%;
+        padding: 0 10px;
+        cursor: pointer;
+        line-height: 1.15;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      button:hover,
+      button.active {
+        border-color: #4aa79e;
+        background: #e7f4f2;
+      }
+
+      button:disabled {
+        cursor: default;
+        opacity: 0.45;
+      }
+
+      .section {
+        min-width: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      .grid {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .toolbar {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .spacer {
+        flex: 1;
+      }
+
+      .stage {
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background: #eef2f7;
+      }
+
+      .stage-fit {
+        width: var(--canvas-display-width, 1280px);
+        height: var(--canvas-display-height, 720px);
+        position: relative;
+      }
+
+      .stage-frame {
+        width: var(--canvas-width, 1280px);
+        height: var(--canvas-height, 720px);
+        transform: scale(var(--canvas-scale, 1));
+        transform-origin: top left;
+        background: #f8fafc;
+        box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+      }
+
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+      }
+
+      code {
+        min-width: 0;
+        max-width: 100%;
+        display: block;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        border: 1px solid #d8e0ea;
+        border-radius: 6px;
+        padding: 10px;
+        color: #334155;
+        background: #f8fafc;
+        font-size: 12px;
+      }
+
+      .keyframe-list {
+        min-height: 34px;
+        display: grid;
+        gap: 4px;
+        border: 1px solid #d8e0ea;
+        border-radius: 6px;
+        padding: 8px;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+
+      .keyframe-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .menu {
+        position: fixed;
+        z-index: 20;
+        min-width: 210px;
+        padding: 6px;
+        display: none;
+        border: 1px solid #bdc8d5;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+      }
+
+      .menu.open {
+        display: grid;
+        gap: 4px;
+      }
+
+      .menu button {
+        width: 100%;
+        justify-content: flex-start;
+        text-align: left;
+        border: 0;
+        min-height: 32px;
+        padding: 0 10px;
+      }
+
+      .menu hr {
+        width: 100%;
+        margin: 4px 0;
+        border: 0;
+        border-top: 1px solid #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h1>Flowlib Workspace</h1>
+      <label>
+        Preset
+        <select id="preset">
+          <option value="flowchart">Live flowchart</option>
+          <option value="dendrogram">Dendrogram</option>
+          <option value="venn">Venn diagram</option>
+          <option value="circle">Circle diagram</option>
+          <option value="triangles">Triangle nodes</option>
+          <option value="quadrant">Quadrant chart</option>
+          <option value="graph">Graph layouts</option>
+          <option value="function">Function graph</option>
+          <option value="bezier">Bezier mobject</option>
+          <option value="boolean-operations">Boolean operations</option>
+          <option value="projection-proof">Projection proof</option>
+          <optgroup label="Manim Repository page 2">
+            <option value="manim-harmonograph">Harmonograph</option>
+            <option value="manim-volume-revolution">Volume of revolution</option>
+            <option value="manim-cross-sections">Known cross-sections</option>
+            <option value="manim-polar-area">Rectangular vs polar area</option>
+            <option value="manim-koch-curve">Koch curve</option>
+            <option value="manim-fibonacci-spiral">Fibonacci golden spiral</option>
+            <option value="manim-cycloid">Cycloid</option>
+            <option value="manim-mod-cardioid">M mod N cardioid</option>
+            <option value="manim-riemann">Riemann integral</option>
+            <option value="manim-lorenz">Lorenz attractor</option>
+          </optgroup>
+        </select>
+      </label>
+      <div class="section">
+        <h2>Live Editing</h2>
+        <div class="grid">
+          <button id="add-node">Add node</button>
+          <button id="connect-mode">Connect</button>
+          <button id="connect-chain">Chain</button>
+          <button id="edit-label">Edit text</button>
+          <button id="layout">Layout</button>
+          <button id="switch-layout">Switch layout</button>
+        </div>
+        <h2>Content</h2>
+        <label>
+          Text / formula
+          <input id="content-text" type="text" value="frac{x}{y} + sum_{i=1}^{n} x_i^2">
+        </label>
+        <label>
+          Font
+          <select id="content-font">
+            <option value="math">Math</option>
+            <option value="sans">Sans</option>
+            <option value="serif">Serif</option>
+            <option value="mono">Mono</option>
+          </select>
+        </label>
+        <label>
+          Math variables
+          <select id="content-math-style">
+            <option value="normal">Upright</option>
+            <option value="italic">Italic</option>
+          </select>
+        </label>
+        <div class="grid">
+          <button id="add-text-asset">Add text</button>
+          <button id="add-math-asset">Add math</button>
+          <button id="add-image-asset">Add image</button>
+          <button id="open-projection-proof">Projection demo</button>
+        </div>
+        <h2>Animation</h2>
+        <div class="grid">
+          <button id="pulse">Pulse</button>
+          <button id="grow">Grow</button>
+          <button id="rotate">Rotate</button>
+          <button id="trace">Trace path</button>
+        </div>
+        <h2>Keyframes</h2>
+        <label>
+          Target
+          <select id="key-target">
+            <option value="object">Selected object</option>
+            <option value="camera">Camera</option>
+          </select>
+        </label>
+        <div class="grid">
+          <label>
+            Time
+            <input id="key-time" type="number" min="0" max="30" step="0.1" value="0">
+          </label>
+          <label>
+            Duration
+            <input id="key-duration" type="number" min="0.1" max="30" step="0.1" value="3">
+          </label>
+        </div>
+        <input id="key-scrub" type="range" min="0" max="3" step="0.05" value="0">
+        <div class="grid">
+          <button id="key-set">Set keyframe</button>
+          <button id="key-play">Play</button>
+          <button id="key-pause">Pause</button>
+          <button id="key-clear">Clear</button>
+        </div>
+        <div id="keyframes-list" class="keyframe-list" aria-live="polite"></div>
+        <h2>Camera</h2>
+        <div class="grid">
+          <button id="zoom-in">Zoom in</button>
+          <button id="zoom-out">Zoom out</button>
+          <button id="pan-left">Pan left</button>
+          <button id="pan-right">Pan right</button>
+          <button id="pan-up">Pan up</button>
+          <button id="pan-down">Pan down</button>
+          <button id="camera-rotate">Rotate view</button>
+          <button id="fit">Fit</button>
+        </div>
+        <h2>Export</h2>
+        <label>
+          Canvas size
+          <select id="canvas-size">
+            <option value="1280x720" selected>Landscape 1280 x 720</option>
+            <option value="1920x1080">Landscape 1920 x 1080</option>
+            <option value="1024x576">Landscape 1024 x 576</option>
+            <option value="1080x1080">Square 1080 x 1080</option>
+            <option value="720x1280">Portrait 720 x 1280</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <div class="grid">
+          <label>
+            Width
+            <input id="canvas-width" type="number" min="320" max="3840" step="16" value="1280">
+          </label>
+          <label>
+            Height
+            <input id="canvas-height" type="number" min="240" max="2160" step="16" value="720">
+          </label>
+        </div>
+        <div class="grid">
+          <button id="export-video">Export WebM</button>
+        </div>
+      </div>
+      <code id="snippet"></code>
+    </aside>
+    <main>
+      <header>
+        <strong id="title">Live flowchart</strong>
+        <span class="spacer"></span>
+        <span id="metrics"></span>
+      </header>
+      <div id="stage" class="stage">
+        <div id="stage-fit" class="stage-fit">
+          <div id="stage-frame" class="stage-frame">
+            <canvas id="canvas" width="1280" height="720"></canvas>
+          </div>
+        </div>
+      </div>
+      <footer id="status">Ready</footer>
+    </main>
+    <div id="node-menu" class="menu" role="menu" aria-hidden="true">
+      <button data-action="rename" role="menuitem">Rename</button>
+      <button data-action="connect" role="menuitem">Connect from node</button>
+      <button data-action="reroute" role="menuitem">Reroute outgoing</button>
+      <button data-action="disconnect" role="menuitem">Disconnect outgoing</button>
+      <hr>
+      <button data-action="pulse" role="menuitem">Pulse</button>
+      <button data-action="grow" role="menuitem">Grow</button>
+      <button data-action="rotate" role="menuitem">Rotate</button>
+      <button data-action="shape" role="menuitem">Cycle shape</button>
+      <hr>
+      <button data-action="duplicate" role="menuitem">Duplicate</button>
+      <button data-action="delete" role="menuitem">Delete</button>
+    </div>
+
+    <script type="module">
+      import {
+        Canvas2DRenderer,
+        CircleNode,
+        GraphLayout,
+        ImageNode,
+        LayeredLayout,
+        LineNode,
+        LiveDiagramEngine,
+        ManimRepositoryExamples,
+        MathTextNode,
+        PathNode,
+        RectNode,
+        Scene,
+        TextNode,
+        Timeline,
+        TriangleNode,
+        VGroup,
+        camera3DDollyBy,
+        camera3DOrbitBy,
+        camera3DPanBy,
+        camera3DTo,
+        cameraTo,
+        createAxes,
+        createBooleanOperationsExampleScene,
+        createCircleDiagram,
+        createDendrogram,
+        createFlowchart,
+        createFunctionGraph,
+        createGraph,
+        createQuadrantChart,
+        createTriangleNodeDiagram,
+        createVennDiagram,
+        cubicBezier,
+        downloadBlob,
+        growFromCenter,
+        growToSize,
+        loadComputerModernFonts,
+        moveAlongPath,
+        pulse,
+        recordCanvasToWebM,
+        resolveFontFamily,
+        rotateBy
+      } from "../src/index.js";
+
+      await loadComputerModernFonts().catch((error) => {
+        console.warn("Flowlib CMU fonts could not be loaded.", error);
+      });
+
+      const canvas = document.querySelector("#canvas");
+      const stage = document.querySelector("#stage");
+      const stageFit = document.querySelector("#stage-fit");
+      const stageFrame = document.querySelector("#stage-frame");
+      const canvasSizeSelect = document.querySelector("#canvas-size");
+      const canvasWidthInput = document.querySelector("#canvas-width");
+      const canvasHeightInput = document.querySelector("#canvas-height");
+      const keyTargetSelect = document.querySelector("#key-target");
+      const keyTimeInput = document.querySelector("#key-time");
+      const keyDurationInput = document.querySelector("#key-duration");
+      const keyScrub = document.querySelector("#key-scrub");
+      const keyframesList = document.querySelector("#keyframes-list");
+      const contentTextInput = document.querySelector("#content-text");
+      const contentFontSelect = document.querySelector("#content-font");
+      const contentMathStyleSelect = document.querySelector("#content-math-style");
+      const preset = document.querySelector("#preset");
+      const title = document.querySelector("#title");
+      const status = document.querySelector("#status");
+      const metrics = document.querySelector("#metrics");
+      const snippet = document.querySelector("#snippet");
+      const nodeMenu = document.querySelector("#node-menu");
+      const renderer = new Canvas2DRenderer(canvas, { pixelRatio: effectivePixelRatio() });
+      const manimExamples = new Map(ManimRepositoryExamples.map((example) => [example.id, example]));
+      const canvasPresets = new Map([
+        ["1280x720", { width: 1280, height: 720 }],
+        ["1920x1080", { width: 1920, height: 1080 }],
+        ["1024x576", { width: 1024, height: 576 }],
+        ["1080x1080", { width: 1080, height: 1080 }],
+        ["720x1280", { width: 720, height: 1280 }]
+      ]);
+      let canvasSize = { width: 1280, height: 720 };
+      let engine = null;
+      let sceneState = null;
+      let frame = 0;
+      let selectedId = null;
+      let layoutIndex = 0;
+      let menuNode = null;
+      let workspaceKeyframes = [];
+      let keyframeId = 0;
+      let playingWorkspaceKeyframes = false;
+      let assetOffset = 0;
+      let workspaceAssetTarget = null;
+      const WORKSPACE_KEYFRAME_TAG = "workspace-keyframe";
+
+      const snippets = {
+        flowchart: "createFlowchart([...])\\nengine.beginInlineEdit(nodeId)",
+        dendrogram: "createDendrogram(tree)\\nnew GraphLayout({ name: 'tree' })",
+        venn: "createVennDiagram(['Design', 'Data', 'Code'])",
+        circle: "createCircleDiagram(items)\\nnew GraphLayout({ name: 'circular' })",
+        triangles: "createTriangleNodeDiagram(items)",
+        quadrant: "createQuadrantChart(points)",
+        graph: "createGraph(vertices, edges)\\nengine.animateLayout(new GraphLayout({ name }))",
+        function: "createAxes(...)\\ncreateFunctionGraph(fn, { axes })",
+        bezier: "const curve = cubicBezier(p0, p1, p2, p3)\\nmoveAlongPath(timeline, node, curve.sample())",
+        "boolean-operations": "new UnionNode([...])\\nnew DifferenceNode([...])\\nnew IntersectionNode([...])",
+        "projection-proof": "P = (x, y, z)\\nP' = (x / z, y / z, 1)\\nray-plane intersection at z = 1",
+        "manim-harmonograph": "createHarmonographScene()\\nValueTracker + parametric curve updaters",
+        "manim-volume-revolution": "createVolumeRevolutionScene()\\nprojectPoint3D + revolution rings",
+        "manim-cross-sections": "createCrossSectionsScene()\\nprojected 3D square cross-sections",
+        "manim-polar-area": "createPolarAreaDerivationScene()\\nRiemann rectangles + polar sectors",
+        "manim-koch-curve": "createKochCurveScene()\\nrecursive path replacement",
+        "manim-fibonacci-spiral": "createFibonacciSpiralScene()\\nrectangles + path animation",
+        "manim-cycloid": "createCycloidScene()\\nTracedPathNode follows a rolling point",
+        "manim-mod-cardioid": "createModCardioidScene()\\nmodular circle chords",
+        "manim-riemann": "createRiemannIntegralScene()\\nanimated rectangle refinements",
+        "manim-lorenz": "createLorenzAttractorScene()\\nprojected 3D traced trajectory"
+      };
+
+      preset.addEventListener("change", () => mountPreset(preset.value));
+      document.querySelector("#add-node").addEventListener("click", addNode);
+      document.querySelector("#connect-mode").addEventListener("click", toggleConnect);
+      document.querySelector("#connect-chain").addEventListener("click", chainNodes);
+      document.querySelector("#edit-label").addEventListener("click", editSelected);
+      document.querySelector("#layout").addEventListener("click", relayout);
+      document.querySelector("#switch-layout").addEventListener("click", switchLayout);
+      document.querySelector("#add-text-asset").addEventListener("click", () => addContentAsset("text"));
+      document.querySelector("#add-math-asset").addEventListener("click", () => addContentAsset("math"));
+      document.querySelector("#add-image-asset").addEventListener("click", () => addContentAsset("image"));
+      document.querySelector("#open-projection-proof").addEventListener("click", () => {
+        preset.value = "projection-proof";
+        mountPreset("projection-proof");
+      });
+      document.querySelector("#pulse").addEventListener("click", pulseTarget);
+      document.querySelector("#grow").addEventListener("click", growTarget);
+      document.querySelector("#rotate").addEventListener("click", rotateTarget);
+      document.querySelector("#trace").addEventListener("click", traceTarget);
+      document.querySelector("#zoom-in").addEventListener("click", () => zoomView(1.25));
+      document.querySelector("#zoom-out").addEventListener("click", () => zoomView(0.8));
+      document.querySelector("#pan-left").addEventListener("click", () => panView({ x: -120, y: 0 }));
+      document.querySelector("#pan-right").addEventListener("click", () => panView({ x: 120, y: 0 }));
+      document.querySelector("#pan-up").addEventListener("click", () => panView({ x: 0, y: -90 }));
+      document.querySelector("#pan-down").addEventListener("click", () => panView({ x: 0, y: 90 }));
+      document.querySelector("#camera-rotate").addEventListener("click", rotateView);
+      document.querySelector("#fit").addEventListener("click", fitCurrent);
+      document.querySelector("#export-video").addEventListener("click", exportVideo);
+      document.querySelector("#key-set").addEventListener("click", setWorkspaceKeyframe);
+      document.querySelector("#key-play").addEventListener("click", playWorkspaceKeyframes);
+      document.querySelector("#key-pause").addEventListener("click", pauseWorkspaceKeyframes);
+      document.querySelector("#key-clear").addEventListener("click", () => clearWorkspaceKeyframes());
+      keyScrub.addEventListener("input", () => seekWorkspaceTime(Number(keyScrub.value)));
+      keyTimeInput.addEventListener("change", () => seekWorkspaceTime(Number(keyTimeInput.value)));
+      keyDurationInput.addEventListener("change", updateKeyframeDuration);
+      canvasSizeSelect.addEventListener("change", applyCanvasSizePreset);
+      canvasWidthInput.addEventListener("change", applyCustomCanvasSize);
+      canvasHeightInput.addEventListener("change", applyCustomCanvasSize);
+      nodeMenu.addEventListener("click", handleMenuAction);
+      document.addEventListener("pointerdown", (event) => {
+        if (!nodeMenu.contains(event.target)) hideNodeMenu();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") hideNodeMenu();
+      });
+      addEventListener("resize", () => {
+        applyDisplayPixelRatio(renderer);
+        if (engine?.renderer) applyDisplayPixelRatio(engine.renderer);
+        updateCanvasViewport();
+        renderCurrent();
+      });
+
+      function mountPreset(key) {
+        hideNodeMenu();
+        clearWorkspaceKeyframes({ silent: true });
+        stopScene();
+        engine?.destroy();
+        engine = null;
+        selectedId = null;
+        layoutIndex = 0;
+        workspaceAssetTarget = null;
+        title.textContent = preset.options[preset.selectedIndex].textContent;
+        snippet.textContent = snippets[key] || "";
+        const built = buildPreset(key);
+        if (built.model) mountModel(built);
+        else mountScene(built);
+        updateControls();
+        updateKeyframeUI();
+      }
+
+      function mountModel({ model, layout, statusText }) {
+        engine = new LiveDiagramEngine({ canvas, model, layout, background: "#f8fafc", rendererOptions: { pixelRatio: effectivePixelRatio() } });
+        engine.on("selection:change", ({ selection }) => {
+          selectedId = [...selection][0] || null;
+          if (selectedId) workspaceAssetTarget = null;
+          updateMetrics();
+          updateKeyframeUI();
+        });
+        engine.on("node:click", ({ node }) => {
+          selectedId = node.id;
+          workspaceAssetTarget = null;
+          setStatus(`Selected ${node.label}`);
+        });
+        engine.on("node:doubleclick", ({ node }) => engine.beginInlineEdit(node.id));
+        engine.on("node:contextmenu", ({ node, screen }) => showNodeMenu(node, screen));
+        engine.on("canvas:contextmenu", hideNodeMenu);
+        engine.on("canvas:click", hideNodeMenu);
+        engine.on("node:editcommit", ({ node }) => setStatus(`Renamed ${node.id}`));
+        engine.on("connection:create", ({ edge }) => setStatus(`Connected ${edge.source} -> ${edge.target}`));
+        engine.on("connection:reconnect", ({ edge }) => setStatus(`Reconnected ${edge.id}`));
+        engine.on("connection:cancel", () => setStatus("Connection cancelled"));
+        engine.fit();
+        engine.start();
+        setStatus(statusText || "Live model ready");
+        updateMetrics();
+      }
+
+      function mountScene({ scene, timeline = new Timeline(), target, path, camera3D, statusText }) {
+        sceneState = { scene, timeline, target, path, camera3D, last: performance.now() };
+        fitScene(scene);
+        const tick = (now) => {
+          if (!sceneState) return;
+          const dt = Math.min(0.1, (now - sceneState.last) / 1000);
+          sceneState.last = now;
+          sceneState.timeline.step(dt);
+          syncKeyframeClock();
+          scene.step(dt);
+          renderer.resize(canvasSize.width, canvasSize.height);
+          renderer.render(scene);
+          frame = requestAnimationFrame(tick);
+        };
+        frame = requestAnimationFrame(tick);
+        setStatus(statusText || "Scene ready");
+        updateMetrics();
+      }
+
+      function stopScene() {
+        if (frame) cancelAnimationFrame(frame);
+        frame = 0;
+        sceneState = null;
+      }
+
+      function buildPreset(key) {
+        if (manimExamples.has(key)) {
+          return manimExamples.get(key).create();
+        }
+        if (key === "dendrogram") {
+          return {
+            model: createDendrogram({
+              id: "model",
+              label: "Model",
+              children: [
+                { label: "Input", children: ["CSV", "JSON"] },
+                { label: "Transform", children: ["Clean", "Rank", "Cluster"] },
+                { label: "Output", children: ["Diagram", "Animation"] }
+              ]
+            }),
+            layout: new GraphLayout({ name: "tree", root: "model", layerGap: 130, nodeGap: 115 })
+          };
+        }
+        if (key === "venn") {
+          return { scene: createVennDiagram(["Design", "Data", "Code"], { centerLabel: "Flowlib" }), statusText: "Venn scene ready" };
+        }
+        if (key === "circle") {
+          return {
+            model: createCircleDiagram(["Plan", "Build", "Animate", "Share"], { directed: true }),
+            layout: new GraphLayout({ name: "circular", radius: 220 })
+          };
+        }
+        if (key === "triangles") {
+          return {
+            model: createTriangleNodeDiagram(["Parse", "Route", "Render", "Export"]),
+            layout: new LayeredLayout({ direction: "LR", layerGap: 190 })
+          };
+        }
+        if (key === "quadrant") {
+          return {
+            scene: createQuadrantChart([
+              { x: -0.7, y: 0.75, label: "Fast wins", fill: "#0f766e" },
+              { x: 0.65, y: 0.65, label: "Bets", fill: "#2563eb" },
+              { x: -0.45, y: -0.5, label: "Backlog", fill: "#64748b" },
+              { x: 0.72, y: -0.35, label: "Avoid", fill: "#be123c" }
+            ]),
+            statusText: "Quadrant chart ready"
+          };
+        }
+        if (key === "graph") {
+          return {
+            model: createGraph(["A", "B", "C", "D", "E", "F"], [["A", "B"], ["A", "C"], ["B", "D"], ["C", "E"], ["D", "F"], ["E", "F"]], { layout: "spring" }),
+            layout: new GraphLayout({ name: "spring", iterations: 180 })
+          };
+        }
+        if (key === "function") return buildFunctionGraph();
+        if (key === "bezier") return buildBezierScene();
+        if (key === "boolean-operations") return createBooleanOperationsExampleScene();
+        if (key === "projection-proof") return buildProjectionProofScene();
+        return {
+          model: createFlowchart(["Parse input", "Validate shape", "Run layout", "Render scene"]),
+          layout: new LayeredLayout({ direction: "LR" })
+        };
+      }
+
+      function buildFunctionGraph() {
+        const scene = new Scene({ background: "#f8fafc" });
+        const timeline = new Timeline({ autoplay: true, loop: true });
+        const axes = createAxes({ xRange: [-6, 6, 2], yRange: [-2, 2, 1], width: 680, height: 340 });
+        const curve = createFunctionGraph((x) => Math.sin(x), { axes, style: { stroke: "#2563eb", strokeWidth: 3 } });
+        const marker = new CircleNode({ radius: 9, style: { fill: "#2563eb", stroke: "#ffffff", strokeWidth: 3 } });
+        scene.add(axes, curve, marker);
+        moveAlongPath(timeline, marker, curve.points, { duration: 3.2, ease: "linear", at: 0 });
+        timeline.duration = 3.2;
+        return { scene, timeline, target: marker, path: curve.points, statusText: "Function graph ready" };
+      }
+
+      function buildBezierScene() {
+        const scene = new Scene({ background: "#f8fafc" });
+        const timeline = new Timeline({ autoplay: true, loop: true });
+        const curve = cubicBezier({ x: -260, y: 120 }, { x: -140, y: -220 }, { x: 180, y: -200 }, { x: 270, y: 110 });
+        const points = curve.sample(80);
+        const path = new PathNode({ points, style: { stroke: "#0f766e", strokeWidth: 4 } });
+        const marker = new CircleNode({ radius: 10, style: { fill: "#0f766e", stroke: "#ffffff", strokeWidth: 3 } });
+        const group = new VGroup(path, marker, new TextNode({ text: "Bezier VMobject", y: 190, fontSize: 18, fontWeight: 700, style: { fill: "#0f172a" } }));
+        scene.add(group);
+        moveAlongPath(timeline, marker, points, { duration: 2.8, ease: "inOutCubic", at: 0 });
+        timeline.duration = 2.8;
+        return { scene, timeline, target: marker, path: points, statusText: "Bezier mobject ready" };
+      }
+
+      function buildProjectionProofScene() {
+        const scene = new Scene({ background: "#f8fafc" });
+        const timeline = new Timeline({ autoplay: true, loop: true });
+        const state = { z: 3.2 };
+        const x = 1.15;
+        const y = 0.85;
+        const eye = { x: -520, y: 105 };
+        const zScale = 180;
+        const yScale = 122;
+        const screenX = eye.x + zScale;
+        const screenCenter = { x: 385, y: 65 };
+        const screenWidth = 320;
+        const screenHeight = 220;
+        const axis = new LineNode({ points: [{ x: eye.x - 45, y: eye.y }, { x: 185, y: eye.y }], style: { stroke: "#94a3b8", strokeWidth: 2, markerEnd: "arrow" } });
+        const screenPlane = new LineNode({ points: [{ x: screenX, y: -145 }, { x: screenX, y: 245 }], style: { stroke: "#0f172a", strokeWidth: 4 } });
+        const ray = new LineNode({ style: { stroke: "#2563eb", strokeWidth: 4 } });
+        const projectionLink = new LineNode({ style: { stroke: "#0f766e", strokeWidth: 2, lineDash: [8, 8] } });
+        const wrongGuide = new LineNode({ style: { stroke: "#dc2626", strokeWidth: 2, lineDash: [5, 7] } });
+        const eyeDot = new CircleNode({ x: eye.x, y: eye.y, radius: 12, style: { fill: "#0f172a", stroke: "#ffffff", strokeWidth: 3 } });
+        const pointDot = new CircleNode({ radius: 12, style: { fill: "#dc2626", stroke: "#ffffff", strokeWidth: 3 } });
+        const projectedDot = new CircleNode({ radius: 10, style: { fill: "#0f766e", stroke: "#ffffff", strokeWidth: 3 } });
+        const wrongDot = new CircleNode({ radius: 7, style: { fill: "#ffffff", stroke: "#dc2626", strokeWidth: 3 } });
+        const screenImage = new ImageNode({
+          x: screenCenter.x,
+          y: screenCenter.y,
+          width: screenWidth,
+          height: screenHeight,
+          src: createScreenGridDataUri(),
+          alt: "screen plane",
+          style: { stroke: "#0f172a", strokeWidth: 2, fill: "#e2e8f0" }
+        });
+        const screenDot = new CircleNode({ radius: 9, style: { fill: "#0f766e", stroke: "#ffffff", strokeWidth: 3 } });
+        const zLabel = new MathTextNode({ x: -35, y: 260, text: "z = 3.20", fontSize: 22, maxWidth: 360, style: { fill: "#0f172a" } });
+        const pointLabel = new MathTextNode({ text: "P = (x, y, z)", fontSize: 18, maxWidth: 260, style: { fill: "#dc2626" } });
+        const projectionLabel = new MathTextNode({ text: "P' = (x/z, y/z, 1)", fontSize: 18, maxWidth: 300, style: { fill: "#0f766e" } });
+        const result = new MathTextNode({ x: 315, y: 246, text: "P' = (x / z, y / z, 1)", fontSize: 24, maxWidth: 510, style: { fill: "#0f172a" } });
+
+        scene.add(
+          new TextNode({ x: -70, y: -330, text: "Why divide by z?", fontSize: 31, fontWeight: 800, maxWidth: 520, style: { fill: "#0f172a" } }),
+          new TextNode({ x: -120, y: -292, text: "A screen point is where the camera ray through P intersects the plane z = 1.", fontSize: 18, maxWidth: 720, style: { fill: "#334155" } }),
+          axis,
+          screenPlane,
+          new TextNode({ x: eye.x, y: eye.y + 38, text: "camera", fontSize: 15, fontWeight: 700, style: { fill: "#0f172a" } }),
+          new TextNode({ x: 172, y: eye.y + 28, text: "z axis", fontSize: 14, style: { fill: "#64748b" } }),
+          new MathTextNode({ x: screenX - 8, y: -172, text: "screen: z = 1", fontSize: 18, maxWidth: 230, style: { fill: "#0f172a" } }),
+          new TextNode({ x: -160, y: -218, text: "Problem: keeping x and y unchanged puts the point on the wrong place on the screen.", fontSize: 17, maxWidth: 540, style: { fill: "#475569" } }),
+          new MathTextNode({ x: -126, y: -188, text: "P(t) = t(x, y, z)", fontSize: 21, maxWidth: 360, style: { fill: "#2563eb" } }),
+          new MathTextNode({ x: -112, y: -158, text: "tz = 1 -> t = 1 / z", fontSize: 21, maxWidth: 380, style: { fill: "#2563eb" } }),
+          new MathTextNode({ x: -118, y: -128, text: "therefore tx = x / z and ty = y / z", fontSize: 21, maxWidth: 500, style: { fill: "#2563eb" } }),
+          new TextNode({ x: screenCenter.x, y: -83, text: "Screen coordinates shrink with depth", fontSize: 18, fontWeight: 800, maxWidth: 360, style: { fill: "#0f172a" } }),
+          screenImage,
+          ray,
+          wrongGuide,
+          projectionLink,
+          eyeDot,
+          wrongDot,
+          projectedDot,
+          pointDot,
+          screenDot,
+          pointLabel,
+          projectionLabel,
+          zLabel,
+          result
+        );
+
+        const update = () => {
+          const point = { x: eye.x + state.z * zScale, y: eye.y - y * yScale };
+          const projected = { x: screenX, y: eye.y - (y / state.z) * yScale };
+          const wrong = { x: screenX, y: point.y };
+          const screenPoint = {
+            x: screenCenter.x + (x / state.z) * 105,
+            y: screenCenter.y - (y / state.z) * 78
+          };
+          pointDot.position.set(point.x, point.y);
+          projectedDot.position.set(projected.x, projected.y);
+          wrongDot.position.set(wrong.x, wrong.y);
+          screenDot.position.set(screenPoint.x, screenPoint.y);
+          pointLabel.position.set(point.x + 72, point.y - 30);
+          projectionLabel.position.set(projected.x + 108, projected.y + 24);
+          ray.setPoints([eye, point]);
+          wrongGuide.setPoints([wrong, projected]);
+          projectionLink.setPoints([projected, screenPoint]);
+          zLabel.text = `z = ${state.z.toFixed(2)};  t = 1 / z = ${(1 / state.z).toFixed(2)}`;
+          result.text = `P' = (${(x / state.z).toFixed(2)}, ${(y / state.z).toFixed(2)}, 1)`;
+        };
+
+        scene.addUpdater(update);
+        update();
+        timeline.to(state, { z: 4.5 }, { at: 0, duration: 2, ease: "inOutCubic" });
+        timeline.to(state, { z: 1.6 }, { at: 2, duration: 2, ease: "inOutCubic" });
+        timeline.to(state, { z: 3.2 }, { at: 4, duration: 2, ease: "inOutCubic" });
+        timeline.duration = 6;
+        return { scene, timeline, target: pointDot, statusText: "Projection proof ready" };
+      }
+
+      function addNode() {
+        if (!engine) return;
+        hideNodeMenu();
+        const id = `node-${engine.model.nodes.size + 1}`;
+        const center = engine.scene.camera.position;
+        engine.addNode({ id, label: `Node ${engine.model.nodes.size + 1}`, x: center.x, y: center.y, kind: preset.value === "triangles" ? "triangle" : "process", shape: preset.value === "triangles" ? "triangle" : "rect" });
+        selectedId = id;
+        engine.selectNode(id);
+        setStatus(`Added ${id}`);
+        updateMetrics();
+      }
+
+      function toggleConnect() {
+        if (!engine) return;
+        hideNodeMenu();
+        engine.setTool(engine.tool === "connect" ? "select" : "connect");
+        document.querySelector("#connect-mode").classList.toggle("active", engine.tool === "connect");
+        setStatus(engine.tool === "connect" ? "Connect mode" : "Select mode");
+      }
+
+      function chainNodes() {
+        if (!engine) return;
+        hideNodeMenu();
+        engine.model.connectChain([...engine.model.nodes.keys()], { clearExisting: true });
+        setStatus("Chain rebuilt");
+        updateMetrics();
+      }
+
+      function editSelected() {
+        if (!engine) return;
+        hideNodeMenu();
+        const node = selectedNode();
+        if (node) engine.beginInlineEdit(node.id);
+      }
+
+      function addContentAsset(kind) {
+        const scene = activeScene();
+        if (!scene) return;
+        hideNodeMenu();
+        const text = contentTextInput.value.trim() || "x' = x / z";
+        const fontFamily = resolveFontFamily(contentFontSelect.value);
+        const center = currentCamera()?.position || { x: 0, y: 0 };
+        const offset = (assetOffset++ % 6) * 28;
+        let node;
+        if (kind === "math") {
+          node = new MathTextNode({
+            text,
+            x: center.x + offset,
+            y: center.y + offset,
+            fontFamily,
+            fontSize: 38,
+            maxWidth: 650,
+            mathOptions: { identifierStyle: contentMathStyleSelect.value },
+            style: { fill: "#0f172a" }
+          });
+        } else if (kind === "image") {
+          node = new ImageNode({
+            src: createWorkspaceImageDataUri(text),
+            alt: text,
+            x: center.x + offset,
+            y: center.y + offset,
+            width: 300,
+            height: 170,
+            style: { fill: "#e2e8f0", stroke: "#0f172a", strokeWidth: 1.5 }
+          });
+          node.image?.addEventListener?.("load", () => renderCurrent(), { once: true });
+        } else {
+          node = new TextNode({ text, x: center.x + offset, y: center.y + offset, fontFamily, fontSize: 26, fontWeight: 750, maxWidth: 650, style: { fill: "#0f172a" } });
+        }
+        scene.add(node);
+        workspaceAssetTarget = node;
+        if (engine) engine.clearSelection();
+        if (sceneState) sceneState.target = node;
+        renderCurrent();
+        setStatus(`Added ${kind}`);
+      }
+
+      function activeScene() {
+        return engine?.scene || sceneState?.scene || null;
+      }
+
+      function createWorkspaceImageDataUri(text) {
+        const label = escapeSvg(text).slice(0, 60);
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="340" viewBox="0 0 600 340"><defs><pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M 30 0 L 0 0 0 30" fill="none" stroke="#cbd5e1" stroke-width="1"/></pattern></defs><rect width="600" height="340" rx="14" fill="#f8fafc"/><rect width="600" height="340" fill="url(#grid)"/><circle cx="76" cy="78" r="32" fill="#4aa79e"/><rect x="128" y="54" width="330" height="46" rx="8" fill="#0f172a"/><text x="293" y="83" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">${label}</text><path d="M110 250 C190 150 318 320 490 184" fill="none" stroke="#2563eb" stroke-width="12" stroke-linecap="round"/></svg>`;
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      }
+
+      function createScreenGridDataUri() {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="440" viewBox="0 0 640 440"><defs><pattern id="screen-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#cbd5e1" stroke-width="1.2"/></pattern></defs><rect width="640" height="440" rx="16" fill="#f8fafc"/><rect width="640" height="440" fill="url(#screen-grid)"/><path d="M320 0 V440 M0 220 H640" stroke="#94a3b8" stroke-width="2"/><text x="320" y="34" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" fill="#0f172a">z = 1 screen plane</text><text x="594" y="237" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="20" fill="#64748b">x / z</text><text x="335" y="424" font-family="Inter, Arial, sans-serif" font-size="20" fill="#64748b">y / z</text></svg>`;
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      }
+
+      function escapeSvg(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function relayout() {
+        if (!engine) return;
+        hideNodeMenu();
+        engine.animateLayout(currentLayout(), { duration: 0.55 });
+        updateKeyframeUI();
+        setStatus("Layout animated");
+      }
+
+      function switchLayout() {
+        if (!engine) return;
+        hideNodeMenu();
+        const layouts = [
+          new GraphLayout({ name: "circular" }),
+          new GraphLayout({ name: "spring", iterations: 200 }),
+          new GraphLayout({ name: "tree", root: [...engine.model.nodes.keys()][0] }),
+          new GraphLayout({ name: "grid", columns: 3 }),
+          new LayeredLayout({ direction: "LR" })
+        ];
+        layoutIndex = (layoutIndex + 1) % layouts.length;
+        engine.animateLayout(layouts[layoutIndex], { duration: 0.55 });
+        updateKeyframeUI();
+        setStatus(`Switched layout ${layoutIndex + 1}`);
+      }
+
+      function pulseTarget() {
+        const target = animationTarget();
+        const timeline = currentTimeline();
+        if (!target || !timeline) return;
+        if ("scale" in target) pulse(timeline, target, { at: timeline.time, duration: 0.45, scale: 1.18 });
+        else animateModelPulse(target, timeline);
+        timeline.play();
+        updateKeyframeUI();
+        setStatus("Pulse animation");
+      }
+
+      function growTarget() {
+        const target = animationTarget();
+        const timeline = currentTimeline();
+        if (!target || !timeline) return;
+        if ("width" in target && "height" in target) growToSize(timeline, target, { width: target.width * 1.16, height: target.height * 1.16 }, { at: timeline.time, duration: 0.45, ease: "inOutCubic" });
+        else growFromCenter(timeline, target, { at: timeline.time, duration: 0.45 });
+        timeline.play();
+        updateKeyframeUI();
+        setStatus("Grow animation");
+      }
+
+      function rotateTarget() {
+        const target = animationTarget();
+        const timeline = currentTimeline();
+        if (!target || !timeline) return;
+        rotateBy(timeline, target, Math.PI / 4, { at: timeline.time, duration: 0.5, ease: "inOutCubic" });
+        timeline.play();
+        updateKeyframeUI();
+        setStatus("Rotate animation");
+      }
+
+      function traceTarget() {
+        if (!sceneState?.target || !sceneState?.path) {
+          preset.value = "bezier";
+          mountPreset("bezier");
+          return;
+        }
+        moveAlongPath(sceneState.timeline, sceneState.target, sceneState.path, { at: sceneState.timeline.time, duration: 1.8, ease: "inOutCubic" });
+        sceneState.timeline.play();
+        updateKeyframeUI();
+        setStatus("Tracing path");
+      }
+
+      function animateCamera(options) {
+        const timeline = currentTimeline();
+        const camera = currentCamera();
+        if (!timeline || !camera) return;
+        const camera3D = currentCamera3D();
+        if (camera3D) {
+          camera3DTo(timeline, camera3D, { ...options, at: timeline.time, duration: 0.45, ease: "inOutCubic" });
+        } else {
+          cameraTo(timeline, camera, { ...options, at: timeline.time, duration: 0.45, ease: "inOutCubic" });
+        }
+        timeline.play();
+        updateKeyframeUI();
+        setStatus("Camera animated");
+      }
+
+      function zoomView(factor) {
+        const camera3D = currentCamera3D();
+        if (camera3D) {
+          const timeline = currentTimeline();
+          if (!timeline) return;
+          const radius = camera3D.getOrbit().radius;
+          camera3DDollyBy(timeline, camera3D, factor > 1 ? -radius * 0.18 : radius * 0.22, { at: timeline.time, duration: 0.45, ease: "inOutCubic" });
+          timeline.play();
+          updateKeyframeUI();
+          setStatus("3D camera dolly");
+          return;
+        }
+        animateCamera({ zoom: currentCamera().zoom * factor });
+      }
+
+      function panView(delta) {
+        const camera3D = currentCamera3D();
+        if (camera3D) {
+          const timeline = currentTimeline();
+          if (!timeline) return;
+          camera3DPanBy(timeline, camera3D, { x: delta.x / camera3D.zoom, y: -delta.y / camera3D.zoom }, { at: timeline.time, duration: 0.45, ease: "inOutCubic" });
+          timeline.play();
+          updateKeyframeUI();
+          setStatus("3D camera pan");
+          return;
+        }
+        animateCamera({ position: currentCamera().position.clone().add(delta) });
+      }
+
+      function rotateView() {
+        const camera3D = currentCamera3D();
+        if (camera3D) {
+          const timeline = currentTimeline();
+          if (!timeline) return;
+          camera3DOrbitBy(timeline, camera3D, { yaw: Math.PI / 5 }, { at: timeline.time, duration: 0.55, ease: "inOutCubic" });
+          timeline.play();
+          updateKeyframeUI();
+          setStatus("3D camera orbit");
+          return;
+        }
+        animateCamera({ rotation: currentCamera().rotation + Math.PI / 10 });
+      }
+
+      function fitCurrent() {
+        if (engine) engine.fit();
+        else if (sceneState) fitScene(sceneState.scene);
+        renderCurrent();
+        setStatus("Fit view");
+      }
+
+      async function exportVideo() {
+        const button = document.querySelector("#export-video");
+        const timeline = currentTimeline();
+        const exportRenderer = activeRenderer();
+        const previousPixelRatio = exportRenderer?.pixelRatio;
+        const duration = Math.max(1, Math.min(12, timeline?.duration || 5));
+        const wasPlaying = !!timeline?.playing;
+        button.disabled = true;
+        setStatus("Recording WebM...");
+        try {
+          setRendererPixelRatio(exportRenderer, 1);
+          timeline?.seek?.(0);
+          timeline?.play?.();
+          renderCurrent();
+          const blob = await recordCanvasToWebM(canvas, { duration, fps: 30 });
+          downloadBlob(blob, `flowlib-${preset.value}.webm`);
+          setStatus(`Exported ${duration.toFixed(1)}s WebM`);
+        } catch (error) {
+          setStatus(error?.message || "Video export failed");
+        } finally {
+          if (previousPixelRatio != null) setRendererPixelRatio(exportRenderer, previousPixelRatio);
+          renderCurrent();
+          if (!wasPlaying) timeline?.pause?.();
+          button.disabled = false;
+        }
+      }
+
+      function setWorkspaceKeyframe() {
+        const target = captureKeyframeTarget();
+        if (!target) {
+          setStatus("No keyframe target");
+          return;
+        }
+        const time = clampNumber(Number(keyTimeInput.value), 0, keyframeDuration(), 0);
+        const existing = workspaceKeyframes.find((frame) => frame.targetKey === target.targetKey && Math.abs(frame.time - time) < 0.001);
+        if (existing) {
+          Object.assign(existing, target, { time, id: existing.id });
+        } else {
+          workspaceKeyframes.push({ ...target, time, id: `kf-${++keyframeId}` });
+        }
+        workspaceKeyframes.sort((a, b) => a.time - b.time || a.targetKey.localeCompare(b.targetKey));
+        rebuildWorkspaceKeyframeTweens();
+        seekWorkspaceTime(time, { silent: true });
+        updateKeyframeUI();
+        setStatus(`Keyframe ${target.label} @ ${formatTime(time)}s`);
+      }
+
+      function playWorkspaceKeyframes() {
+        const timeline = currentTimeline();
+        if (!timeline) return;
+        const hasAuthored = workspaceKeyframes.length >= 2;
+        const hasExisting = timeline.tracks.some((track) => track.data?.source !== WORKSPACE_KEYFRAME_TAG) || timeline.duration > 0;
+        if (!hasAuthored && !hasExisting) {
+          setStatus("Set keyframes or choose an animated preset");
+          return;
+        }
+        if (hasAuthored) rebuildWorkspaceKeyframeTweens();
+        playingWorkspaceKeyframes = true;
+        timeline.loop = false;
+        timeline.duration = Math.max(timeline.duration, timelinePlaybackDuration());
+        timeline.seek(0);
+        syncTimelineRender();
+        timeline.play();
+        updateKeyframeUI();
+        setStatus(hasAuthored ? "Playing keyframes" : "Playing animation");
+      }
+
+      function pauseWorkspaceKeyframes() {
+        const timeline = currentTimeline();
+        if (!timeline) return;
+        playingWorkspaceKeyframes = false;
+        timeline.pause();
+        syncKeyframeClock();
+        setStatus("Keyframes paused");
+      }
+
+      function clearWorkspaceKeyframes(options = {}) {
+        const timeline = currentTimeline();
+        if (timeline) removeWorkspaceKeyframeTweens(timeline);
+        workspaceKeyframes = [];
+        playingWorkspaceKeyframes = false;
+        updateKeyframeUI();
+        if (!options.silent) setStatus("Keyframes cleared");
+      }
+
+      function seekWorkspaceTime(time, options = {}) {
+        const timeline = currentTimeline();
+        if (!timeline) return;
+        const next = clampNumber(time, 0, timelinePlaybackDuration(), 0);
+        playingWorkspaceKeyframes = false;
+        timeline.pause();
+        timeline.seek(next);
+        keyTimeInput.value = formatTime(next);
+        keyScrub.value = String(next);
+        syncTimelineRender();
+        if (!options.silent) setStatus(`Time ${formatTime(next)}s`);
+      }
+
+      function updateKeyframeDuration() {
+        const authoredDuration = keyframeDuration();
+        const duration = timelinePlaybackDuration();
+        keyDurationInput.value = formatTime(authoredDuration);
+        keyScrub.max = String(duration);
+        keyTimeInput.max = String(duration);
+        if (Number(keyTimeInput.value) > duration) seekWorkspaceTime(duration, { silent: true });
+        rebuildWorkspaceKeyframeTweens();
+        updateKeyframeUI();
+      }
+
+      function captureKeyframeTarget() {
+        if (keyTargetSelect.value === "camera") {
+          const camera3D = currentCamera3D();
+          if (camera3D) {
+            return {
+              type: "camera3d",
+              targetKey: "camera3d",
+              targetRef: camera3D,
+              label: "3D camera",
+              snapshot: {
+                position: { x: camera3D.position.x, y: camera3D.position.y, z: camera3D.position.z },
+                target: { x: camera3D.target.x, y: camera3D.target.y, z: camera3D.target.z },
+                zoom: camera3D.zoom
+              }
+            };
+          }
+          const camera = currentCamera();
+          if (!camera) return null;
+          return {
+            type: "camera2d",
+            targetKey: "camera2d",
+            targetRef: camera,
+            label: "Camera",
+            snapshot: {
+              position: { x: camera.position.x, y: camera.position.y },
+              zoom: camera.zoom,
+              rotation: camera.rotation
+            }
+          };
+        }
+
+        const target = animationTarget();
+        if (!target?.position) return null;
+        const isModelNode = !!(engine && target.id && engine.model.nodes.has(target.id));
+        return {
+          type: "object",
+          targetKey: isModelNode ? `node:${target.id}` : `scene:${target.id || "target"}`,
+          targetId: target.id,
+          targetRef: target,
+          label: target.label || target.name || target.id || "Object",
+          snapshot: { position: { x: target.position.x, y: target.position.y } }
+        };
+      }
+
+      function rebuildWorkspaceKeyframeTweens() {
+        const timeline = currentTimeline();
+        if (!timeline) return;
+        removeWorkspaceKeyframeTweens(timeline);
+        if (workspaceKeyframes.length >= 2) {
+          timeline.duration = Math.max(timeline.duration, keyframeDuration(), maxKeyframeTime());
+        }
+
+        for (const group of groupWorkspaceKeyframes()) {
+          const frames = group.sort((a, b) => a.time - b.time);
+          if (frames.length < 2) continue;
+          const target = resolveKeyframeTarget(frames[0]);
+          if (!target) continue;
+          for (let index = 0; index < frames.length - 1; index += 1) {
+            const from = frames[index];
+            const to = frames[index + 1];
+            const duration = Math.max(0.0001, to.time - from.time);
+            if (from.type === "object") addObjectKeyframeTweens(timeline, target, from, to, duration);
+            else if (from.type === "camera2d") addCamera2DKeyframeTweens(timeline, target, from, to, duration);
+            else if (from.type === "camera3d") addCamera3DKeyframeTweens(timeline, target, from, to, duration);
+          }
+        }
+      }
+
+      function addObjectKeyframeTweens(timeline, target, from, to, duration) {
+        addTaggedTween(timeline.to(target.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.x }));
+        addTaggedTween(timeline.to(target.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.y }));
+      }
+
+      function addCamera2DKeyframeTweens(timeline, camera, from, to, duration) {
+        addTaggedTween(timeline.to(camera.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.x }));
+        addTaggedTween(timeline.to(camera.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.y }));
+        addTaggedTween(timeline.to(camera, { zoom: to.snapshot.zoom }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.zoom }));
+        addTaggedTween(timeline.to(camera, { rotation: to.snapshot.rotation }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.rotation }));
+      }
+
+      function addCamera3DKeyframeTweens(timeline, camera, from, to, duration) {
+        addTaggedTween(timeline.to(camera.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.x }));
+        addTaggedTween(timeline.to(camera.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.y }));
+        addTaggedTween(timeline.to(camera.position, { z: to.snapshot.position.z }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.z }));
+        addTaggedTween(timeline.to(camera.target, { x: to.snapshot.target.x }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.target.x }));
+        addTaggedTween(timeline.to(camera.target, { y: to.snapshot.target.y }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.target.y }));
+        addTaggedTween(timeline.to(camera.target, { z: to.snapshot.target.z }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.target.z }));
+        addTaggedTween(timeline.to(camera, { zoom: to.snapshot.zoom }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.zoom }));
+      }
+
+      function addTaggedTween(tween) {
+        const tweens = Array.isArray(tween) ? tween : [tween];
+        for (const item of tweens) {
+          item.data = { ...(item.data || {}), source: WORKSPACE_KEYFRAME_TAG };
+        }
+      }
+
+      function removeWorkspaceKeyframeTweens(timeline) {
+        timeline.tracks = timeline.tracks.filter((track) => track.data?.source !== WORKSPACE_KEYFRAME_TAG);
+      }
+
+      function groupWorkspaceKeyframes() {
+        const groups = new Map();
+        for (const frame of workspaceKeyframes) {
+          if (!groups.has(frame.targetKey)) groups.set(frame.targetKey, []);
+          groups.get(frame.targetKey).push(frame);
+        }
+        return [...groups.values()];
+      }
+
+      function resolveKeyframeTarget(frame) {
+        if (frame.type === "object" && engine && frame.targetId) {
+          return engine.model.nodes.get(frame.targetId) || null;
+        }
+        return frame.targetRef || null;
+      }
+
+      function syncTimelineRender() {
+        if (engine) {
+          if (typeof engine.sync === "function") engine.sync();
+          else {
+            engine.model.emit("change", { changeType: "keyframe:seek", version: engine.model.version });
+            engine.render();
+          }
+        } else {
+          renderCurrent();
+        }
+      }
+
+      function syncKeyframeClock() {
+        const timeline = currentTimeline();
+        if (!timeline) return;
+        const duration = timelinePlaybackDuration();
+        if (playingWorkspaceKeyframes && timeline.time >= duration) {
+          timeline.pause();
+          timeline.seek(duration);
+          playingWorkspaceKeyframes = false;
+          syncTimelineRender();
+        }
+        if (playingWorkspaceKeyframes) {
+          const time = clampNumber(timeline.time, 0, duration, 0);
+          keyTimeInput.value = formatTime(time);
+          keyScrub.value = String(time);
+        }
+      }
+
+      function updateKeyframeUI() {
+        const duration = timelinePlaybackDuration();
+        const markers = currentTimelineMarkers();
+        keyScrub.max = String(duration);
+        keyTimeInput.max = String(duration);
+        keyframesList.replaceChildren();
+        if (workspaceKeyframes.length === 0 && markers.length === 0) {
+          keyframesList.textContent = "No keyframes";
+          return;
+        }
+        for (const frame of workspaceKeyframes) {
+          const item = document.createElement("div");
+          item.className = "keyframe-item";
+          const label = document.createElement("span");
+          label.textContent = frame.label;
+          const time = document.createElement("span");
+          time.textContent = `${formatTime(frame.time)}s`;
+          item.append(label, time);
+          keyframesList.append(item);
+        }
+        for (const marker of markers) {
+          const item = document.createElement("div");
+          item.className = "keyframe-item";
+          const label = document.createElement("span");
+          label.textContent = marker.label;
+          const time = document.createElement("span");
+          time.textContent = `${formatTime(marker.time)}s`;
+          item.append(label, time);
+          keyframesList.append(item);
+        }
+      }
+
+      function keyframeDuration() {
+        return clampNumber(Number(keyDurationInput.value), 0.1, 30, 3);
+      }
+
+      function timelinePlaybackDuration() {
+        const timeline = currentTimeline();
+        return Math.max(keyframeDuration(), maxKeyframeTime(), timeline?.duration || 0);
+      }
+
+      function currentTimelineMarkers() {
+        const timeline = currentTimeline();
+        if (!timeline) return [];
+        const markers = new Map();
+        for (const track of timeline.tracks) {
+          if (track.data?.source === WORKSPACE_KEYFRAME_TAG) continue;
+          addTimelineMarker(markers, track.startTime ?? 0);
+          addTimelineMarker(markers, track.endTime ?? track.startTime ?? 0);
+        }
+        return [...markers.entries()]
+          .map(([time, count]) => ({ time: Number(time), label: count === 1 ? "Animation" : `Animation x${count}` }))
+          .sort((a, b) => a.time - b.time)
+          .slice(0, 16);
+      }
+
+      function addTimelineMarker(markers, time) {
+        if (!Number.isFinite(time)) return;
+        const key = Number(formatTime(time));
+        markers.set(key, (markers.get(key) || 0) + 1);
+      }
+
+      function maxKeyframeTime() {
+        return workspaceKeyframes.reduce((max, frame) => Math.max(max, frame.time), 0);
+      }
+
+      function formatTime(value) {
+        return Number(value || 0).toFixed(2).replace(/\.?0+$/, "");
+      }
+
+      function clampNumber(value, min, max, fallback) {
+        if (!Number.isFinite(value)) return fallback;
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function effectivePixelRatio() {
+        return Math.max(1, Math.min(2.5, Number(globalThis.devicePixelRatio) || 1));
+      }
+
+      function activeRenderer() {
+        return engine?.renderer || renderer;
+      }
+
+      function applyDisplayPixelRatio(target = activeRenderer()) {
+        return setRendererPixelRatio(target, effectivePixelRatio());
+      }
+
+      function setRendererPixelRatio(target, pixelRatio) {
+        if (!target) return target;
+        if (typeof target.setPixelRatio === "function") target.setPixelRatio(pixelRatio);
+        else target.pixelRatio = pixelRatio;
+        return target;
+      }
+
+      function applyCanvasSizePreset() {
+        const next = canvasPresets.get(canvasSizeSelect.value);
+        if (next) setCanvasSize(next.width, next.height);
+        else applyCustomCanvasSize();
+      }
+
+      function applyCustomCanvasSize() {
+        canvasSizeSelect.value = "custom";
+        setCanvasSize(canvasWidthInput.value, canvasHeightInput.value);
+      }
+
+      function setCanvasSize(width, height, options = {}) {
+        canvasSize = {
+          width: clampInt(width, 320, 3840, 1280),
+          height: clampInt(height, 240, 2160, 720)
+        };
+        canvasWidthInput.value = canvasSize.width;
+        canvasHeightInput.value = canvasSize.height;
+        updateCanvasViewport();
+        applyDisplayPixelRatio(renderer);
+        if (engine?.renderer) applyDisplayPixelRatio(engine.renderer);
+        renderer.resize(canvasSize.width, canvasSize.height);
+        if (engine && options.fit !== false) engine.fit();
+        else if (sceneState && options.fit !== false) fitScene(sceneState.scene);
+        if (options.render !== false) renderCurrent();
+        if (!options.silent) setStatus(`Canvas ${canvasSize.width} x ${canvasSize.height}`);
+      }
+
+      function updateCanvasViewport() {
+        const availableWidth = Math.max(1, stage.clientWidth - 32);
+        const availableHeight = Math.max(1, stage.clientHeight - 32);
+        const scale = Math.min(1, availableWidth / canvasSize.width, availableHeight / canvasSize.height);
+        const displayWidth = Math.max(1, Math.floor(canvasSize.width * scale));
+        const displayHeight = Math.max(1, Math.floor(canvasSize.height * scale));
+        stageFit.style.setProperty("--canvas-display-width", `${displayWidth}px`);
+        stageFit.style.setProperty("--canvas-display-height", `${displayHeight}px`);
+        stageFrame.style.setProperty("--canvas-width", `${canvasSize.width}px`);
+        stageFrame.style.setProperty("--canvas-height", `${canvasSize.height}px`);
+        stageFrame.style.setProperty("--canvas-scale", scale);
+      }
+
+      function clampInt(value, min, max, fallback) {
+        const number = Number.parseInt(value, 10);
+        if (!Number.isFinite(number)) return fallback;
+        return Math.max(min, Math.min(max, number));
+      }
+
+      function currentLayout() {
+        if (preset.value === "graph" || preset.value === "circle") return new GraphLayout({ name: "spring", iterations: 220 });
+        if (preset.value === "dendrogram") return new GraphLayout({ name: "tree", root: [...engine.model.nodes.keys()][0] });
+        return new LayeredLayout({ direction: "LR" });
+      }
+
+      function animateModelPulse(node, timeline) {
+        const at = timeline.time;
+        timeline.to(node, { width: node.width * 1.12, height: node.height * 1.12 }, { at, duration: 0.22, ease: "outCubic" });
+        timeline.to(node, { width: node.width, height: node.height }, { at: at + 0.22, duration: 0.22, ease: "inCubic" });
+      }
+
+      function selectedNode() {
+        if (!engine) return null;
+        if (selectedId && engine.model.nodes.has(selectedId)) return engine.model.requireNode(selectedId);
+        return [...engine.model.nodes.values()][0] || null;
+      }
+
+      function showNodeMenu(node, screen) {
+        if (!engine) return;
+        menuNode = node;
+        selectedId = node.id;
+        engine.selectNode(node.id);
+        const outgoing = engine.model.outgoing(node.id);
+        nodeMenu.querySelector('[data-action="reroute"]').disabled = outgoing.length === 0;
+        nodeMenu.querySelector('[data-action="disconnect"]').disabled = outgoing.length === 0;
+        nodeMenu.classList.add("open");
+        nodeMenu.setAttribute("aria-hidden", "false");
+        const menuPoint = logicalCanvasToClient(screen);
+        const menuWidth = nodeMenu.offsetWidth || 210;
+        const menuHeight = nodeMenu.offsetHeight || 320;
+        const x = menuPoint.x + 8;
+        const y = menuPoint.y + 8;
+        nodeMenu.style.left = `${clamp(x, 8, innerWidth - menuWidth - 8)}px`;
+        nodeMenu.style.top = `${clamp(y, 8, innerHeight - menuHeight - 8)}px`;
+        setStatus(`Menu for ${node.label}`);
+      }
+
+      function logicalCanvasToClient(point) {
+        const rect = canvas.getBoundingClientRect();
+        const logicalWidth = Math.max(1, canvas.clientWidth || canvas.width || rect.width || 1);
+        const logicalHeight = Math.max(1, canvas.clientHeight || canvas.height || rect.height || 1);
+        return {
+          x: rect.left + point.x * (rect.width > 0 ? rect.width / logicalWidth : 1),
+          y: rect.top + point.y * (rect.height > 0 ? rect.height / logicalHeight : 1)
+        };
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function hideNodeMenu() {
+        nodeMenu.classList.remove("open");
+        nodeMenu.setAttribute("aria-hidden", "true");
+        menuNode = null;
+      }
+
+      function handleMenuAction(event) {
+        const button = event.target.closest("button[data-action]");
+        if (!button || button.disabled || !menuNode || !engine) return;
+        const action = button.dataset.action;
+        const node = menuNode;
+        hideNodeMenu();
+        selectedId = node.id;
+        engine.selectNode(node.id);
+
+        if (action === "rename") {
+          engine.beginInlineEdit(node.id);
+          setStatus(`Editing ${node.label}`);
+        } else if (action === "connect") {
+          engine.startConnection(node.id, { oneShot: true });
+          setStatus(`Pick a target for ${node.label}`);
+        } else if (action === "reroute") {
+          const edge = engine.model.outgoing(node.id)[0];
+          if (!edge) {
+            setStatus(`${node.label} has no outgoing edge`);
+            return;
+          }
+          engine.startConnection(edge.source, { edgeId: edge.id, endpoint: "target", oneShot: true });
+          setStatus(`Pick a new target for ${edge.id}`);
+        } else if (action === "disconnect") {
+          for (const edge of [...engine.model.outgoing(node.id)]) engine.model.removeEdge(edge.id);
+          setStatus(`Disconnected ${node.label}`);
+          updateMetrics();
+        } else if (action === "pulse") {
+          pulseTarget();
+        } else if (action === "grow") {
+          growTarget();
+        } else if (action === "rotate") {
+          rotateTarget();
+        } else if (action === "shape") {
+          cycleNodeShape(node);
+        } else if (action === "duplicate") {
+          duplicateNode(node);
+        } else if (action === "delete") {
+          engine.model.removeNode(node.id);
+          selectedId = null;
+          setStatus(`Deleted ${node.label}`);
+          updateMetrics();
+        }
+      }
+
+      function duplicateNode(node) {
+        const id = `${node.id}-copy-${engine.model.nodes.size + 1}`;
+        const copy = engine.model.addNode({
+          id,
+          label: `${node.label} copy`,
+          x: node.position.x + 180,
+          y: node.position.y + 80,
+          width: node.width,
+          height: node.height,
+          kind: node.kind,
+          shape: node.shape,
+          rotation: node.rotation,
+          style: { ...node.style },
+          data: { ...node.data }
+        });
+        engine.model.connect(node.id, copy.id);
+        selectedId = copy.id;
+        engine.selectNode(copy.id);
+        setStatus(`Duplicated ${node.label}`);
+        updateMetrics();
+      }
+
+      function cycleNodeShape(node) {
+        const shapes = ["rect", "circle", "triangle"];
+        const index = shapes.indexOf(node.shape || node.kind);
+        const shape = shapes[(index + 1) % shapes.length];
+        engine.model.updateNode(node.id, {
+          shape,
+          kind: shape === "rect" ? "process" : shape,
+          width: shape === "circle" ? 90 : node.width,
+          height: shape === "circle" ? 90 : node.height
+        });
+        setStatus(`${node.label} shape: ${shape}`);
+      }
+
+      function animationTarget() {
+        return workspaceAssetTarget || (engine ? selectedNode() : sceneState?.target);
+      }
+
+      function currentTimeline() {
+        return engine?.timeline || sceneState?.timeline;
+      }
+
+      function currentCamera() {
+        return engine?.scene.camera || sceneState?.scene.camera;
+      }
+
+      function currentCamera3D() {
+        return sceneState?.camera3D || sceneState?.scene.data?.camera3D || null;
+      }
+
+      function fitScene(scene) {
+        renderer.resize(canvasSize.width, canvasSize.height);
+        scene.update(0, scene.clock);
+        const bounds = scene.getSceneBounds().pad(80);
+        const width = canvasSize.width;
+        const height = canvasSize.height;
+        scene.camera.resize(width, height);
+        scene.camera.position.copy(bounds.center);
+        scene.camera.zoom = Math.max(0.08, Math.min(2.5, Math.min(width / Math.max(1, bounds.width), height / Math.max(1, bounds.height))));
+      }
+
+      function renderCurrent() {
+        if (engine) engine.render();
+        else if (sceneState) {
+          renderer.resize(canvasSize.width, canvasSize.height);
+          renderer.render(sceneState.scene);
+        }
+      }
+
+      function updateControls() {
+        const modelMode = !!engine;
+        for (const id of ["add-node", "connect-mode", "connect-chain", "edit-label", "layout", "switch-layout"]) {
+          document.querySelector(`#${id}`).disabled = !modelMode;
+        }
+      }
+
+      function updateMetrics() {
+        if (engine) metrics.textContent = `${engine.model.nodes.size} nodes, ${engine.model.edges.size} edges`;
+        else metrics.textContent = sceneState ? "Scene graph" : "";
+      }
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      function tickWorkspaceTools() {
+        syncKeyframeClock();
+        requestAnimationFrame(tickWorkspaceTools);
+      }
+
+      setCanvasSize(1280, 720, { silent: true, fit: false, render: false });
+      mountPreset("flowchart");
+      tickWorkspaceTools();
+    </script>
+  </body>
+</html>

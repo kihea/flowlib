@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flowlib Diagram Types</title>
+    <style>
+      :root {
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      header {
+        min-height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-bottom: 1px solid #d7dee8;
+        background: #ffffff;
+      }
+
+      button {
+        min-height: 34px;
+        border: 1px solid #bac6d4;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #0f172a;
+        padding: 0 10px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.active,
+      button:hover {
+        border-color: #4aa79e;
+        background: #e7f4f2;
+      }
+
+      canvas {
+        width: 100%;
+        height: calc(100vh - 57px);
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Diagram Types</strong>
+      <button data-kind="flowchart" class="active">Flowchart</button>
+      <button data-kind="knowledge">Knowledge Graph</button>
+      <button data-kind="mind">Mind Map</button>
+      <button data-kind="state">State Machine</button>
+      <button data-kind="function">Function Map</button>
+    </header>
+    <canvas id="canvas"></canvas>
+    <script type="module">
+      import {
+        GraphLayout,
+        LayeredLayout,
+        LiveDiagramEngine,
+        MindMapLayout,
+        createFlowchart,
+        createFunctionMap,
+        createKnowledgeGraph,
+        createMindMap,
+        createStateMachine
+      } from "../src/index.js";
+
+      const diagrams = {
+        flowchart: () => ({
+          model: createFlowchart(["Capture", "Normalize", "Analyze", "Publish"]),
+          layout: new LayeredLayout({ direction: "LR" })
+        }),
+        knowledge: () => {
+          const model = createKnowledgeGraph(
+            ["Flowlib", "DiagramModel", "Timeline", "Renderer", "Live editor"],
+            [
+              { source: "flowlib", target: "diagrammodel", label: "stores" },
+              { source: "flowlib", target: "timeline", label: "animates" },
+              { source: "flowlib", target: "renderer", label: "draws" },
+              { source: "live-editor", target: "diagrammodel", label: "edits" },
+              { source: "renderer", target: "timeline", label: "samples" }
+            ]
+          );
+          const layout = new GraphLayout({ name: "spring", iterations: 220, linkDistance: 170 });
+          layout.apply(model);
+          return { model, layout };
+        },
+        mind: () => ({
+          model: createMindMap("Flowlib", [
+            { label: "Diagrams", children: ["Flowcharts", "Mind maps", "State machines"] },
+            { label: "Animation", children: ["Timelines", "Presets", "Tracers"] },
+            { label: "Rendering", children: ["Canvas2D", "WebGL2", "Shaders"] }
+          ]),
+          layout: new MindMapLayout({ root: "flowlib" })
+        }),
+        state: () => ({
+          model: createStateMachine(["Idle", "Editing", "Saving", "Synced"], [
+            { source: "idle", target: "editing", label: "select" },
+            { source: "editing", target: "saving", label: "commit" },
+            { source: "saving", target: "synced", label: "ok" },
+            { source: "synced", target: "idle", label: "close" }
+          ]),
+          layout: new LayeredLayout({ direction: "LR" })
+        }),
+        function: () => ({
+          model: createFunctionMap("renderDiagram", ["sync model", "route edges", "draw nodes", "draw labels"]),
+          layout: new LayeredLayout({ direction: "LR" })
+        })
+      };
+
+      const first = diagrams.flowchart();
+      const engine = new LiveDiagramEngine({
+        canvas: document.querySelector("#canvas"),
+        model: first.model,
+        layout: first.layout,
+        background: "#f8fafc"
+      });
+
+      for (const button of document.querySelectorAll("button[data-kind]")) {
+        button.addEventListener("click", () => {
+          for (const item of document.querySelectorAll("button[data-kind]")) item.classList.remove("active");
+          button.classList.add("active");
+          const { model, layout } = diagrams[button.dataset.kind]();
+          engine.setModel(model, { layout });
+        });
+      }
+
+      engine.fit();
+      engine.start();
+      addEventListener("resize", () => engine.render());
+    </script>
+  </body>
+</html>

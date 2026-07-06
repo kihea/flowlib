@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flowlib Live Flowchart</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      header,
+      footer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-color: #d7dee8;
+        background: #ffffff;
+      }
+
+      header {
+        min-height: 56px;
+        border-bottom: 1px solid #d7dee8;
+      }
+
+      footer {
+        min-height: 40px;
+        border-top: 1px solid #d7dee8;
+        color: #475569;
+        font-size: 13px;
+      }
+
+      button {
+        border: 1px solid #bac6d4;
+        background: #ffffff;
+        color: #0f172a;
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 6px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:hover,
+      button.active {
+        background: #e7f4f2;
+        border-color: #6bb7ad;
+      }
+
+      .spacer {
+        flex: 1;
+      }
+
+      canvas {
+        width: 100%;
+        height: calc(100vh - 97px);
+        display: block;
+        touch-action: none;
+      }
+
+      .menu {
+        position: fixed;
+        z-index: 10;
+        min-width: 190px;
+        padding: 6px;
+        display: none;
+        border: 1px solid #bdc8d5;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+      }
+
+      .menu.open {
+        display: grid;
+        gap: 4px;
+      }
+
+      .menu button {
+        width: 100%;
+        justify-content: flex-start;
+        text-align: left;
+        border: 0;
+        min-height: 32px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Flowlib</strong>
+      <button id="layout">Layout</button>
+      <button id="add">Add Node</button>
+      <button id="connect-mode">Connect Mode</button>
+      <button id="connect">Connect Chain</button>
+      <span class="spacer"></span>
+      <span id="count"></span>
+    </header>
+    <canvas id="canvas"></canvas>
+    <footer>
+      <span id="status">Ready</span>
+    </footer>
+    <div id="node-menu" class="menu">
+      <button data-action="rename">Rename</button>
+      <button data-action="connect">Connect From</button>
+      <button data-action="reroute">Reroute Outgoing</button>
+      <button data-action="disconnect">Disconnect Outgoing</button>
+      <button data-action="duplicate">Duplicate</button>
+      <button data-action="delete">Delete</button>
+    </div>
+
+    <script type="module">
+      import { DiagramModel, LayeredLayout, LiveDiagramEngine } from "../src/index.js";
+
+      const model = new DiagramModel();
+      model.addNode({ id: "input", label: "Parse input", kind: "process" });
+      model.addNode({ id: "validate", label: "Validate shape", kind: "process" });
+      model.addNode({ id: "layout", label: "Run layout", kind: "process" });
+      model.addNode({ id: "render", label: "Render scene", kind: "process" });
+      model.addNode({ id: "export", label: "Export or embed", kind: "process" });
+      model.connect("input", "validate");
+      model.connect("validate", "layout");
+      model.connect("layout", "render");
+      model.connect("render", "export");
+
+      const engine = new LiveDiagramEngine({
+        canvas: document.querySelector("#canvas"),
+        model,
+        background: "#f8fafc",
+        layout: new LayeredLayout({ direction: "LR" })
+      });
+
+      const count = document.querySelector("#count");
+      const status = document.querySelector("#status");
+      const menu = document.querySelector("#node-menu");
+      const connectMode = document.querySelector("#connect-mode");
+      let menuNode = null;
+
+      const updateCount = (message) => {
+        count.textContent = `${model.nodes.size} nodes, ${model.edges.size} edges`;
+        if (message) status.textContent = message;
+      };
+
+      const setToolState = () => {
+        connectMode.classList.toggle("active", engine.tool === "connect");
+      };
+
+      const hideMenu = () => {
+        menu.classList.remove("open");
+        menuNode = null;
+      };
+
+      const showMenu = (node, screen) => {
+        menuNode = node;
+        const x = Math.min(innerWidth - 210, screen.x + 8);
+        const y = Math.min(innerHeight - 230, screen.y + 8);
+        menu.style.left = `${Math.max(8, x)}px`;
+        menu.style.top = `${Math.max(8, y)}px`;
+        menu.classList.add("open");
+      };
+
+      const renameNode = (node) => {
+        engine.beginInlineEdit(node.id);
+        updateCount(`Editing ${node.label}`);
+      };
+
+      document.querySelector("#layout").addEventListener("click", () => {
+        hideMenu();
+        engine.animateLayout(new LayeredLayout({ direction: "LR" }), { duration: 0.45 });
+        updateCount("Layout animated");
+      });
+
+      document.querySelector("#add").addEventListener("click", () => {
+        hideMenu();
+        const id = `node-${model.nodes.size + 1}`;
+        engine.addNode({
+          id,
+          label: `Step ${model.nodes.size + 1}`,
+          x: engine.scene.camera.position.x + Math.random() * 240 - 120,
+          y: engine.scene.camera.position.y + Math.random() * 160 - 80
+        });
+        updateCount(`Added ${id}`);
+      });
+
+      connectMode.addEventListener("click", () => {
+        hideMenu();
+        engine.setTool(engine.tool === "connect" ? "select" : "connect");
+        setToolState();
+        updateCount(engine.tool === "connect" ? "Connect mode" : "Select mode");
+      });
+
+      document.querySelector("#connect").addEventListener("click", () => {
+        hideMenu();
+        model.connectChain([...model.nodes.keys()], { clearExisting: true });
+        engine.animateLayout(new LayeredLayout({ direction: "LR" }), { duration: 0.45 });
+        updateCount("Chain rebuilt");
+      });
+
+      menu.addEventListener("click", (event) => {
+        const action = event.target.dataset.action;
+        if (!action || !menuNode) return;
+        const node = menuNode;
+        hideMenu();
+
+        if (action === "rename") {
+          renameNode(node);
+        } else if (action === "connect") {
+          engine.startConnection(node.id, { oneShot: true });
+          setToolState();
+          updateCount(`Pick a target for ${node.label}`);
+        } else if (action === "reroute") {
+          const edge = model.outgoing(node.id)[0];
+          if (!edge) {
+            updateCount(`${node.label} has no outgoing edge`);
+            return;
+          }
+          engine.startConnection(edge.source, { edgeId: edge.id, endpoint: "target", oneShot: true });
+          setToolState();
+          updateCount(`Pick a new target for ${edge.id}`);
+        } else if (action === "disconnect") {
+          for (const edge of [...model.outgoing(node.id)]) model.removeEdge(edge.id);
+          updateCount(`Disconnected ${node.label}`);
+        } else if (action === "duplicate") {
+          const id = `${node.id}-copy-${model.nodes.size + 1}`;
+          model.addNode({
+            id,
+            label: `${node.label} copy`,
+            x: node.position.x + 180,
+            y: node.position.y + 80
+          });
+          model.connect(node.id, id);
+          updateCount(`Duplicated ${node.label}`);
+        } else if (action === "delete") {
+          model.removeNode(node.id);
+          updateCount(`Deleted ${node.label}`);
+        }
+      });
+
+      document.addEventListener("pointerdown", (event) => {
+        if (!menu.contains(event.target)) hideMenu();
+      });
+
+      engine.on("tool:change", setToolState);
+      engine.on("node:click", ({ node }) => updateCount(`Selected ${node.label}`));
+      engine.on("node:doubleclick", ({ node }) => renameNode(node));
+      engine.on("node:contextmenu", ({ node, screen }) => showMenu(node, screen));
+      engine.on("canvas:click", () => updateCount("Ready"));
+      engine.on("canvas:contextmenu", hideMenu);
+      engine.on("node:dragend", ({ node }) => updateCount(`Moved ${node.label}`));
+      engine.on("node:editcommit", ({ node }) => updateCount(`Renamed ${node.id}`));
+      engine.on("connection:create", ({ edge }) => {
+        setToolState();
+        updateCount(`Connected ${edge.source} to ${edge.target}`);
+      });
+      engine.on("connection:reconnect", ({ edge }) => {
+        setToolState();
+        updateCount(`Reconnected ${edge.id}`);
+      });
+      engine.on("connection:cancel", () => {
+        setToolState();
+        updateCount("Connection cancelled");
+      });
+
+      model.on("change", () => updateCount());
+      engine.applyLayout();
+      engine.start();
+      updateCount("Ready");
+      addEventListener("resize", () => engine.render());
+    </script>
+  </body>
+</html>

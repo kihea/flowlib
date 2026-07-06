@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flowlib Graph Layouts</title>
+    <style>
+      :root {
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      header {
+        min-height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-bottom: 1px solid #d7dee8;
+        background: #ffffff;
+      }
+
+      button {
+        min-height: 34px;
+        border: 1px solid #bac6d4;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #0f172a;
+        padding: 0 10px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.active,
+      button:hover {
+        border-color: #4aa79e;
+        background: #e7f4f2;
+      }
+
+      canvas {
+        width: 100%;
+        height: calc(100vh - 57px);
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Graph Layouts</strong>
+      <button data-layout="circular" class="active">Circular</button>
+      <button data-layout="spring">Spring</button>
+      <button data-layout="tree">Tree</button>
+      <button data-layout="partite">Partite</button>
+      <button data-layout="shell">Shell</button>
+      <button data-layout="spiral">Spiral</button>
+      <button data-layout="grid">Grid</button>
+    </header>
+    <canvas id="canvas"></canvas>
+    <script type="module">
+      import { GraphLayout, LiveDiagramEngine, createGraph } from "../src/index.js";
+
+      const graph = createGraph(["A", "B", "C", "D", "E", "F", "G", "H"], [
+        ["A", "B"], ["A", "C"], ["B", "D"], ["C", "D"],
+        ["D", "E"], ["E", "F"], ["E", "G"], ["G", "H"], ["H", "A"]
+      ], {
+        layout: "circular",
+        vertexConfig: { default: { fill: "#ffffff", stroke: "#0f172a" } }
+      });
+
+      const engine = new LiveDiagramEngine({
+        canvas: document.querySelector("#canvas"),
+        model: graph,
+        background: "#f8fafc"
+      });
+
+      const layoutOptions = {
+        circular: {},
+        spring: { iterations: 220, linkDistance: 160 },
+        tree: { root: "A", layerGap: 150, nodeGap: 130 },
+        partite: { partitions: [["A"], ["B", "C"], ["D"], ["E"], ["F", "G"], ["H"]] },
+        shell: { partitions: [["A"], ["B", "C", "H"], ["D", "E", "F", "G"]] },
+        spiral: { radiusStep: 34 },
+        grid: { columns: 4 }
+      };
+
+      for (const button of document.querySelectorAll("button[data-layout]")) {
+        button.addEventListener("click", () => {
+          for (const item of document.querySelectorAll("button[data-layout]")) item.classList.remove("active");
+          button.classList.add("active");
+          const name = button.dataset.layout;
+          engine.animateLayout(new GraphLayout({ name, ...(layoutOptions[name] || {}) }), { duration: 0.55 });
+        });
+      }
+
+      engine.fit();
+      engine.start();
+      addEventListener("resize", () => engine.render());
+    </script>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flowlib Function Graph</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #f8fafc;
+      }
+
+      canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script type="module">
+      import { Canvas2DRenderer, CircleNode, Scene, Timeline, createAxes, createFunctionGraph, moveAlongPath } from "../src/index.js";
+
+      const canvas = document.querySelector("#canvas");
+      const scene = new Scene({ background: "#f8fafc" });
+      const renderer = new Canvas2DRenderer(canvas);
+      const timeline = new Timeline({ autoplay: true, loop: true });
+      const axes = createAxes({ xRange: [-6, 6, 2], yRange: [-2, 2, 1], width: 760, height: 380 });
+      const sine = createFunctionGraph((x) => Math.sin(x), { axes, style: { stroke: "#2563eb", strokeWidth: 3 } });
+      const cosine = createFunctionGraph((x) => Math.cos(x), { axes, style: { stroke: "#0f766e", strokeWidth: 3 } });
+      const markerA = new CircleNode({ x: -380, y: 0, radius: 8, style: { fill: "#2563eb", stroke: "#ffffff", strokeWidth: 3 } });
+      const markerB = new CircleNode({ x: -380, y: -190, radius: 8, style: { fill: "#0f766e", stroke: "#ffffff", strokeWidth: 3 } });
+
+      scene.add(axes, sine, cosine, markerA, markerB);
+      moveAlongPath(timeline, markerA, sine.points, { duration: 3.2, at: 0, ease: "linear" });
+      moveAlongPath(timeline, markerB, cosine.points, { duration: 3.2, at: 0, ease: "linear" });
+      timeline.duration = 3.2;
+
+      let last = performance.now();
+      function frame(now) {
+        const dt = Math.min(0.1, (now - last) / 1000);
+        last = now;
+        timeline.step(dt);
+        scene.step(dt);
+        renderer.resize();
+        renderer.render(scene);
+        requestAnimationFrame(frame);
+      }
+
+      requestAnimationFrame(frame);
+    </script>
+  </body>
+</html>
