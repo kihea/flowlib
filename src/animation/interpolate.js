@@ -58,5 +58,14 @@ export function setPath(target, path, value) {
   for (let index = 0; index < keys.length - 1; index += 1) {
     current = current[keys[index]];
   }
-  current[keys[keys.length - 1]] = value;
+  const key = keys[keys.length - 1];
+  const existing = current[key];
+  if (
+    existing != null && typeof existing === "object" && typeof existing.clone === "function" &&
+    value != null && value.constructor === Object
+  ) {
+    Object.assign(existing, value);
+    return;
+  }
+  current[key] = value;
 }

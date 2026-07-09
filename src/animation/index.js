@@ -1,3 +1,4 @@
+export * from "./clip.js";
 export * from "./easing.js";
 export * from "./interpolate.js";
 export * from "./path-tween.js";

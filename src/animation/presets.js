@@ -28,7 +28,7 @@ export function scaleTo(timeline, node, scale, options = {}) {
 }
 
 export function growToSize(timeline, node, size, options = {}) {
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   const duration = options.duration ?? 0.5;
   const tweens = [];
   if ("radius" in node) {
@@ -54,7 +54,7 @@ export function growFromCenter(timeline, node, options = {}) {
   const originalScale = node.scale.clone();
   node.scale.set(0.001, 0.001);
   node.opacity = options.fromOpacity ?? 0;
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   timeline.to(node.scale, { x: originalScale.x, y: originalScale.y }, { ...options, at, duration: options.duration ?? 0.5 });
   timeline.to(node, { opacity: options.toOpacity ?? 1 }, { ...options, at, duration: options.duration ?? 0.5 });
   return timeline;
@@ -69,7 +69,7 @@ export function rotateBy(timeline, node, radians, options = {}) {
 }
 
 export function pulse(timeline, node, options = {}) {
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   const duration = options.duration ?? 0.35;
   const scale = options.scale ?? 1.12;
   timeline.to(node.scale, { x: scale, y: scale }, { ...options, duration: duration / 2, at });
@@ -78,7 +78,7 @@ export function pulse(timeline, node, options = {}) {
 }
 
 export function indicate(timeline, node, options = {}) {
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   const duration = options.duration ?? 0.5;
   const stroke = node.style.stroke;
   pulse(timeline, node, { ...options, at, duration, scale: options.scale ?? 1.08 });
@@ -90,7 +90,7 @@ export function indicate(timeline, node, options = {}) {
 }
 
 export function traceBetween(timeline, marker, from, to, options = {}) {
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   marker.position.copy(from.position);
   const tweenOptions = {
     ...options,
@@ -105,7 +105,7 @@ export function traceBetween(timeline, marker, from, to, options = {}) {
 }
 
 export function moveAlongPath(timeline, node, points, options = {}) {
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   const tween = new PointPathTween(node, points, options);
   timeline.add(tween, at);
   return tween;
@@ -125,7 +125,7 @@ export function cameraRotateTo(timeline, camera, rotation, options = {}) {
 }
 
 export function cameraTo(timeline, camera, options = {}) {
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   const duration = options.duration ?? 0.6;
   const tweens = [];
   if (options.position) {
@@ -141,7 +141,7 @@ export function cameraTo(timeline, camera, options = {}) {
 }
 
 export function camera3DTo(timeline, camera, options = {}) {
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   const duration = options.duration ?? 0.6;
   const tweens = [];
   if (options.position) {
@@ -184,7 +184,7 @@ export function camera3DOrbitBy(timeline, camera, delta = {}, options = {}) {
 }
 
 export function camera3DOrbit(timeline, camera, delta = {}, options = {}) {
-  const at = options.at ?? timeline.duration;
+  const at = timeline.resolvePosition(options.at);
   const duration = options.duration ?? 0.8;
   const current = camera.getOrbit();
   const startTarget = camera.target.clone();
@@ -254,4 +254,46 @@ function lerpVec3(a, b, t) {
     a.y + (b.y - a.y) * t,
     a.z + (b.z - a.z) * t
   );
+}
+
+export function drawLine(timeline, node, options = {}) {
+  const at = timeline.resolvePosition(options.at);
+  const duration = options.duration ?? 0.8;
+  const length = options.length ?? polylineLength(node.points || []);
+  node.style.lineDash = [length, length];
+  node.style.lineDashOffset = length;
+  return timeline.to(node.style, { lineDashOffset: 0 }, {
+    ease: "inOutCubic",
+    ...options,
+    at,
+    duration
+  });
+}
+
+export function cascadeIn(timeline, nodes, options = {}) {
+  const list = [...nodes];
+  const at = timeline.resolvePosition(options.at);
+  const each = options.each ?? 0.08;
+  const duration = options.duration ?? 0.45;
+  const rise = options.rise ?? 18;
+  const ease = options.ease || "outCubic";
+  list.forEach((node, index) => {
+    const start = at + index * each;
+    const targetY = node.position.y;
+    node.opacity = options.fromOpacity ?? 0;
+    node.position.y = targetY + rise;
+    timeline.to(node, { opacity: options.opacity ?? 1 }, { at: start, duration, ease });
+    timeline.to(node.position, { y: targetY }, { at: start, duration, ease });
+  });
+  return timeline;
+}
+
+function polylineLength(points) {
+  let length = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    const a = Vec2.from(points[index - 1]);
+    const b = Vec2.from(points[index]);
+    length += a.distance(b);
+  }
+  return Math.max(1, length);
 }
