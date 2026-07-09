@@ -224,8 +224,21 @@
 
       .keyframe-item {
         display: flex;
+        align-items: center;
         justify-content: space-between;
         gap: 8px;
+      }
+
+      .keyframe-item .keyframe-actions {
+        display: flex;
+        gap: 4px;
+      }
+
+      .keyframe-item button {
+        width: auto;
+        min-height: 24px;
+        padding: 0 8px;
+        font-size: 11px;
       }
 
       .menu {
@@ -294,6 +307,15 @@
         </select>
       </label>
       <div class="section">
+        <h2>Canvas Mode</h2>
+        <label>
+          Interaction
+          <select id="interaction-mode">
+            <option value="edit">Edit (whiteboard)</option>
+            <option value="view">View (pan &amp; zoom only)</option>
+            <option value="none">Static display</option>
+          </select>
+        </label>
         <h2>Live Editing</h2>
         <div class="grid">
           <button id="add-node">Add node</button>
@@ -355,13 +377,50 @@
             <input id="key-duration" type="number" min="0.1" max="30" step="0.1" value="3">
           </label>
         </div>
-        <input id="key-scrub" type="range" min="0" max="3" step="0.05" value="0">
         <div class="grid">
-          <button id="key-set">Set keyframe</button>
+          <label>
+            Easing
+            <select id="key-ease">
+              <option value="inOutCubic" selected>Ease in-out</option>
+              <option value="linear">Linear</option>
+              <option value="outCubic">Ease out</option>
+              <option value="inCubic">Ease in</option>
+              <option value="inOutSine">Sine in-out</option>
+              <option value="outQuart">Quart out</option>
+              <option value="outExpo">Expo out</option>
+              <option value="outBack">Back out</option>
+              <option value="outElastic">Elastic out</option>
+              <option value="outBounce">Bounce out</option>
+              <option value="spring">Spring</option>
+            </select>
+          </label>
+          <label>
+            Speed
+            <select id="key-speed">
+              <option value="0.25">0.25x</option>
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+          </label>
+        </div>
+        <input id="key-scrub" type="range" min="0" max="3" step="0.05" value="0">
+        <div class="grid three">
           <button id="key-play">Play</button>
           <button id="key-pause">Pause</button>
+          <button id="key-stop">Stop</button>
+        </div>
+        <div class="grid three">
+          <button id="key-set">Set keyframe</button>
+          <button id="key-loop">Loop: off</button>
           <button id="key-clear">Clear</button>
         </div>
+        <div class="grid">
+          <button id="clip-save">Save clip JSON</button>
+          <button id="clip-load">Load clip JSON</button>
+        </div>
+        <input id="clip-file" type="file" accept="application/json,.json" hidden>
         <div id="keyframes-list" class="keyframe-list" aria-live="polite"></div>
         <h2>Camera</h2>
         <div class="grid">
@@ -398,6 +457,7 @@
         </div>
         <div class="grid">
           <button id="export-video">Export WebM</button>
+          <button id="export-png">Export PNG</button>
         </div>
       </div>
       <code id="snippet"></code>
@@ -434,6 +494,7 @@
 
     <script type="module">
       import {
+        AnimationClip,
         Canvas2DRenderer,
         CircleNode,
         GraphLayout,
@@ -467,6 +528,7 @@
         createVennDiagram,
         cubicBezier,
         downloadBlob,
+        exportCanvasToPNG,
         growFromCenter,
         growToSize,
         loadComputerModernFonts,
@@ -491,8 +553,13 @@
       const keyTargetSelect = document.querySelector("#key-target");
       const keyTimeInput = document.querySelector("#key-time");
       const keyDurationInput = document.querySelector("#key-duration");
+      const keyEaseSelect = document.querySelector("#key-ease");
+      const keySpeedSelect = document.querySelector("#key-speed");
+      const keyLoopButton = document.querySelector("#key-loop");
       const keyScrub = document.querySelector("#key-scrub");
       const keyframesList = document.querySelector("#keyframes-list");
+      const interactionModeSelect = document.querySelector("#interaction-mode");
+      const clipFileInput = document.querySelector("#clip-file");
       const contentTextInput = document.querySelector("#content-text");
       const contentFontSelect = document.querySelector("#content-font");
       const contentMathStyleSelect = document.querySelector("#content-math-style");
@@ -521,6 +588,7 @@
       let workspaceKeyframes = [];
       let keyframeId = 0;
       let playingWorkspaceKeyframes = false;
+      let workspaceLoop = false;
       let assetOffset = 0;
       let workspaceAssetTarget = null;
       const WORKSPACE_KEYFRAME_TAG = "workspace-keyframe";
@@ -576,10 +644,18 @@
       document.querySelector("#camera-rotate").addEventListener("click", rotateView);
       document.querySelector("#fit").addEventListener("click", fitCurrent);
       document.querySelector("#export-video").addEventListener("click", exportVideo);
+      document.querySelector("#export-png").addEventListener("click", exportImage);
       document.querySelector("#key-set").addEventListener("click", setWorkspaceKeyframe);
       document.querySelector("#key-play").addEventListener("click", playWorkspaceKeyframes);
       document.querySelector("#key-pause").addEventListener("click", pauseWorkspaceKeyframes);
+      document.querySelector("#key-stop").addEventListener("click", stopWorkspaceKeyframes);
       document.querySelector("#key-clear").addEventListener("click", () => clearWorkspaceKeyframes());
+      keyLoopButton.addEventListener("click", toggleWorkspaceLoop);
+      keySpeedSelect.addEventListener("change", applyPlaybackSpeed);
+      document.querySelector("#clip-save").addEventListener("click", saveWorkspaceClip);
+      document.querySelector("#clip-load").addEventListener("click", () => clipFileInput.click());
+      clipFileInput.addEventListener("change", loadWorkspaceClipFile);
+      interactionModeSelect.addEventListener("change", applyInteractionMode);
       keyScrub.addEventListener("input", () => seekWorkspaceTime(Number(keyScrub.value)));
       keyTimeInput.addEventListener("change", () => seekWorkspaceTime(Number(keyTimeInput.value)));
       keyDurationInput.addEventListener("change", updateKeyframeDuration);
@@ -619,7 +695,7 @@
       }
 
       function mountModel({ model, layout, statusText }) {
-        engine = new LiveDiagramEngine({ canvas, model, layout, background: "#f8fafc", rendererOptions: { pixelRatio: effectivePixelRatio() } });
+        engine = new LiveDiagramEngine({ canvas, model, layout, background: "#f8fafc", interactions: interactionModeSelect.value, rendererOptions: { pixelRatio: effectivePixelRatio() } });
         engine.on("selection:change", ({ selection }) => {
           selectedId = [...selection][0] || null;
           if (selectedId) workspaceAssetTarget = null;
@@ -631,8 +707,12 @@
           workspaceAssetTarget = null;
           setStatus(`Selected ${node.label}`);
         });
-        engine.on("node:doubleclick", ({ node }) => engine.beginInlineEdit(node.id));
-        engine.on("node:contextmenu", ({ node, screen }) => showNodeMenu(node, screen));
+        engine.on("node:doubleclick", ({ node }) => {
+          if (engine.interactions === "edit") engine.beginInlineEdit(node.id);
+        });
+        engine.on("node:contextmenu", ({ node, screen }) => {
+          if (engine.interactions === "edit") showNodeMenu(node, screen);
+        });
         engine.on("canvas:contextmenu", hideNodeMenu);
         engine.on("canvas:click", hideNodeMenu);
         engine.on("node:editcommit", ({ node }) => setStatus(`Renamed ${node.id}`));
@@ -1118,11 +1198,12 @@
           return;
         }
         const time = clampNumber(Number(keyTimeInput.value), 0, keyframeDuration(), 0);
+        const ease = keyEaseSelect.value;
         const existing = workspaceKeyframes.find((frame) => frame.targetKey === target.targetKey && Math.abs(frame.time - time) < 0.001);
         if (existing) {
-          Object.assign(existing, target, { time, id: existing.id });
+          Object.assign(existing, target, { time, ease, id: existing.id });
         } else {
-          workspaceKeyframes.push({ ...target, time, id: `kf-${++keyframeId}` });
+          workspaceKeyframes.push({ ...target, time, ease, id: `kf-${++keyframeId}` });
         }
         workspaceKeyframes.sort((a, b) => a.time - b.time || a.targetKey.localeCompare(b.targetKey));
         rebuildWorkspaceKeyframeTweens();
@@ -1144,11 +1225,37 @@
         playingWorkspaceKeyframes = true;
         timeline.loop = false;
         timeline.duration = Math.max(timeline.duration, timelinePlaybackDuration());
+        timeline.timeScale(Number(keySpeedSelect.value) || 1);
+        timeline.reset();
         timeline.seek(0);
         syncTimelineRender();
         timeline.play();
         updateKeyframeUI();
         setStatus(hasAuthored ? "Playing keyframes" : "Playing animation");
+      }
+
+      function stopWorkspaceKeyframes() {
+        const timeline = currentTimeline();
+        if (!timeline) return;
+        playingWorkspaceKeyframes = false;
+        timeline.pause();
+        timeline.reset();
+        seekWorkspaceTime(0, { silent: true });
+        setStatus("Stopped");
+      }
+
+      function toggleWorkspaceLoop() {
+        workspaceLoop = !workspaceLoop;
+        keyLoopButton.textContent = workspaceLoop ? "Loop: on" : "Loop: off";
+        keyLoopButton.classList.toggle("active", workspaceLoop);
+        setStatus(workspaceLoop ? "Looping playback" : "Playback plays once");
+      }
+
+      function applyPlaybackSpeed() {
+        const timeline = currentTimeline();
+        const speed = Number(keySpeedSelect.value) || 1;
+        if (timeline) timeline.timeScale(speed);
+        setStatus(`Playback speed ${speed}x`);
       }
 
       function pauseWorkspaceKeyframes() {
@@ -1262,25 +1369,28 @@
       }
 
       function addObjectKeyframeTweens(timeline, target, from, to, duration) {
-        addTaggedTween(timeline.to(target.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.x }));
-        addTaggedTween(timeline.to(target.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.y }));
+        const ease = to.ease || "inOutCubic";
+        addTaggedTween(timeline.to(target.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease, from: from.snapshot.position.x }));
+        addTaggedTween(timeline.to(target.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease, from: from.snapshot.position.y }));
       }
 
       function addCamera2DKeyframeTweens(timeline, camera, from, to, duration) {
-        addTaggedTween(timeline.to(camera.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.x }));
-        addTaggedTween(timeline.to(camera.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.y }));
-        addTaggedTween(timeline.to(camera, { zoom: to.snapshot.zoom }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.zoom }));
-        addTaggedTween(timeline.to(camera, { rotation: to.snapshot.rotation }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.rotation }));
+        const ease = to.ease || "inOutCubic";
+        addTaggedTween(timeline.to(camera.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease, from: from.snapshot.position.x }));
+        addTaggedTween(timeline.to(camera.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease, from: from.snapshot.position.y }));
+        addTaggedTween(timeline.to(camera, { zoom: to.snapshot.zoom }, { at: from.time, duration, ease, from: from.snapshot.zoom }));
+        addTaggedTween(timeline.to(camera, { rotation: to.snapshot.rotation }, { at: from.time, duration, ease, from: from.snapshot.rotation }));
       }
 
       function addCamera3DKeyframeTweens(timeline, camera, from, to, duration) {
-        addTaggedTween(timeline.to(camera.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.x }));
-        addTaggedTween(timeline.to(camera.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.y }));
-        addTaggedTween(timeline.to(camera.position, { z: to.snapshot.position.z }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.position.z }));
-        addTaggedTween(timeline.to(camera.target, { x: to.snapshot.target.x }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.target.x }));
-        addTaggedTween(timeline.to(camera.target, { y: to.snapshot.target.y }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.target.y }));
-        addTaggedTween(timeline.to(camera.target, { z: to.snapshot.target.z }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.target.z }));
-        addTaggedTween(timeline.to(camera, { zoom: to.snapshot.zoom }, { at: from.time, duration, ease: "inOutCubic", from: from.snapshot.zoom }));
+        const ease = to.ease || "inOutCubic";
+        addTaggedTween(timeline.to(camera.position, { x: to.snapshot.position.x }, { at: from.time, duration, ease, from: from.snapshot.position.x }));
+        addTaggedTween(timeline.to(camera.position, { y: to.snapshot.position.y }, { at: from.time, duration, ease, from: from.snapshot.position.y }));
+        addTaggedTween(timeline.to(camera.position, { z: to.snapshot.position.z }, { at: from.time, duration, ease, from: from.snapshot.position.z }));
+        addTaggedTween(timeline.to(camera.target, { x: to.snapshot.target.x }, { at: from.time, duration, ease, from: from.snapshot.target.x }));
+        addTaggedTween(timeline.to(camera.target, { y: to.snapshot.target.y }, { at: from.time, duration, ease, from: from.snapshot.target.y }));
+        addTaggedTween(timeline.to(camera.target, { z: to.snapshot.target.z }, { at: from.time, duration, ease, from: from.snapshot.target.z }));
+        addTaggedTween(timeline.to(camera, { zoom: to.snapshot.zoom }, { at: from.time, duration, ease, from: from.snapshot.zoom }));
       }
 
       function addTaggedTween(tween) {
@@ -1327,10 +1437,15 @@
         if (!timeline) return;
         const duration = timelinePlaybackDuration();
         if (playingWorkspaceKeyframes && timeline.time >= duration) {
-          timeline.pause();
-          timeline.seek(duration);
-          playingWorkspaceKeyframes = false;
-          syncTimelineRender();
+          if (workspaceLoop) {
+            timeline.reset();
+            timeline.play();
+          } else {
+            timeline.pause();
+            timeline.seek(duration);
+            playingWorkspaceKeyframes = false;
+            syncTimelineRender();
+          }
         }
         if (playingWorkspaceKeyframes) {
           const time = clampNumber(timeline.time, 0, duration, 0);
@@ -1353,10 +1468,21 @@
           const item = document.createElement("div");
           item.className = "keyframe-item";
           const label = document.createElement("span");
-          label.textContent = frame.label;
-          const time = document.createElement("span");
-          time.textContent = `${formatTime(frame.time)}s`;
-          item.append(label, time);
+          label.textContent = `${frame.label}${frame.ease && frame.ease !== "inOutCubic" ? ` (${frame.ease})` : ""}`;
+          const actions = document.createElement("span");
+          actions.className = "keyframe-actions";
+          const jump = document.createElement("button");
+          jump.type = "button";
+          jump.textContent = `${formatTime(frame.time)}s`;
+          jump.title = "Jump to keyframe time";
+          jump.addEventListener("click", () => seekWorkspaceTime(frame.time));
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.textContent = "x";
+          remove.setAttribute("aria-label", `Delete keyframe ${frame.label} at ${formatTime(frame.time)}s`);
+          remove.addEventListener("click", () => removeWorkspaceKeyframe(frame.id));
+          actions.append(jump, remove);
+          item.append(label, actions);
           keyframesList.append(item);
         }
         for (const marker of markers) {
@@ -1369,6 +1495,167 @@
           item.append(label, time);
           keyframesList.append(item);
         }
+      }
+
+      function removeWorkspaceKeyframe(id) {
+        const index = workspaceKeyframes.findIndex((frame) => frame.id === id);
+        if (index < 0) return;
+        const [removed] = workspaceKeyframes.splice(index, 1);
+        rebuildWorkspaceKeyframeTweens();
+        updateKeyframeUI();
+        setStatus(`Removed keyframe ${removed.label} @ ${formatTime(removed.time)}s`);
+      }
+
+      function workspaceClipFromKeyframes() {
+        const clip = new AnimationClip({ name: `flowlib-${preset.value}` });
+        for (const frame of workspaceKeyframes) {
+          if (frame.type === "object") {
+            clip.setKeyframe(frame.targetKey, "position", frame.time, { ...frame.snapshot.position }, frame.ease);
+          } else if (frame.type === "camera2d") {
+            clip.setKeyframe("camera2d", "position", frame.time, { ...frame.snapshot.position }, frame.ease);
+            clip.setKeyframe("camera2d", "zoom", frame.time, frame.snapshot.zoom, frame.ease);
+            clip.setKeyframe("camera2d", "rotation", frame.time, frame.snapshot.rotation, frame.ease);
+          } else if (frame.type === "camera3d") {
+            clip.setKeyframe("camera3d", "position", frame.time, { ...frame.snapshot.position }, frame.ease);
+            clip.setKeyframe("camera3d", "target", frame.time, { ...frame.snapshot.target }, frame.ease);
+            clip.setKeyframe("camera3d", "zoom", frame.time, frame.snapshot.zoom, frame.ease);
+          }
+        }
+        return clip;
+      }
+
+      function saveWorkspaceClip() {
+        if (workspaceKeyframes.length === 0) {
+          setStatus("Set keyframes before saving a clip");
+          return;
+        }
+        const clip = workspaceClipFromKeyframes();
+        const blob = new Blob([JSON.stringify(clip.toJSON(), null, 2)], { type: "application/json" });
+        downloadBlob(blob, `${clip.name}.clip.json`);
+        setStatus(`Saved ${clip.name}.clip.json`);
+      }
+
+      async function loadWorkspaceClipFile(event) {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file) return;
+        try {
+          const clip = AnimationClip.fromJSON(JSON.parse(await file.text()));
+          applyClipToWorkspace(clip);
+          setStatus(`Loaded clip ${clip.name} (${formatTime(clip.duration)}s)`);
+        } catch (error) {
+          setStatus(error?.message || "Could not load clip JSON");
+        }
+      }
+
+      function applyClipToWorkspace(clip) {
+        clearWorkspaceKeyframes({ silent: true });
+        const frames = new Map();
+        const frameFor = (track, time) => {
+          const key = `${track.targetId}@${formatTime(time)}`;
+          if (!frames.has(key)) {
+            const base = clipFrameBase(track.targetId);
+            if (!base) return null;
+            frames.set(key, { ...base, time, ease: null, id: `kf-${++keyframeId}`, snapshot: { ...base.snapshot } });
+          }
+          return frames.get(key);
+        };
+        for (const track of clip.tracks) {
+          for (const keyframe of track.keyframes) {
+            const frame = frameFor(track, keyframe.time);
+            if (!frame) continue;
+            frame.ease = keyframe.ease || frame.ease;
+            frame.snapshot[track.property] = keyframe.value && typeof keyframe.value === "object"
+              ? { ...keyframe.value }
+              : keyframe.value;
+          }
+        }
+        workspaceKeyframes = [...frames.values()].filter(hasCompleteSnapshot);
+        workspaceKeyframes.sort((a, b) => a.time - b.time || a.targetKey.localeCompare(b.targetKey));
+        const duration = Math.max(keyframeDuration(), maxKeyframeTime());
+        keyDurationInput.value = formatTime(duration);
+        rebuildWorkspaceKeyframeTweens();
+        seekWorkspaceTime(0, { silent: true });
+        updateKeyframeUI();
+      }
+
+      function clipFrameBase(targetId) {
+        if (targetId === "camera2d") {
+          const camera = currentCamera();
+          if (!camera) return null;
+          return {
+            type: "camera2d",
+            targetKey: "camera2d",
+            targetRef: camera,
+            label: "Camera",
+            snapshot: {
+              position: { x: camera.position.x, y: camera.position.y },
+              zoom: camera.zoom,
+              rotation: camera.rotation
+            }
+          };
+        }
+        if (targetId === "camera3d") {
+          const camera3D = currentCamera3D();
+          if (!camera3D) return null;
+          return {
+            type: "camera3d",
+            targetKey: "camera3d",
+            targetRef: camera3D,
+            label: "3D camera",
+            snapshot: {
+              position: { x: camera3D.position.x, y: camera3D.position.y, z: camera3D.position.z },
+              target: { x: camera3D.target.x, y: camera3D.target.y, z: camera3D.target.z },
+              zoom: camera3D.zoom
+            }
+          };
+        }
+        if (targetId?.startsWith("node:")) {
+          const nodeId = targetId.slice("node:".length);
+          const node = engine?.model.nodes.get(nodeId);
+          if (!node) return null;
+          return {
+            type: "object",
+            targetKey: targetId,
+            targetId: nodeId,
+            targetRef: node,
+            label: node.label || nodeId,
+            snapshot: { position: { x: node.position.x, y: node.position.y } }
+          };
+        }
+        return null;
+      }
+
+      function hasCompleteSnapshot(frame) {
+        if (frame.type === "object") return !!frame.snapshot.position;
+        if (frame.type === "camera2d") return !!frame.snapshot.position;
+        if (frame.type === "camera3d") return !!frame.snapshot.position && !!frame.snapshot.target;
+        return false;
+      }
+
+      async function exportImage() {
+        const button = document.querySelector("#export-png");
+        button.disabled = true;
+        try {
+          renderCurrent();
+          await exportCanvasToPNG(canvas, `flowlib-${preset.value}.png`);
+          setStatus("Exported PNG snapshot");
+        } catch (error) {
+          setStatus(error?.message || "PNG export failed");
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      function applyInteractionMode() {
+        const mode = interactionModeSelect.value;
+        if (engine) {
+          engine.setInteractions(mode);
+          setStatus(mode === "edit" ? "Whiteboard editing enabled" : mode === "view" ? "View mode: pan & zoom only" : "Static display: pointer input off");
+        } else {
+          setStatus("Scene presets are display-only; interaction modes apply to diagram presets");
+        }
+        updateControls();
       }
 
       function keyframeDuration() {
@@ -1654,9 +1941,9 @@
       }
 
       function updateControls() {
-        const modelMode = !!engine;
+        const editable = !!engine && interactionModeSelect.value === "edit";
         for (const id of ["add-node", "connect-mode", "connect-chain", "edit-label", "layout", "switch-layout"]) {
-          document.querySelector(`#${id}`).disabled = !modelMode;
+          document.querySelector(`#${id}`).disabled = !editable;
         }
       }
 
