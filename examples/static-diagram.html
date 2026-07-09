@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flowlib Static Diagrams</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background: #f6f8fb;
+        color: #111827;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        display: grid;
+        gap: 24px;
+        max-width: 1100px;
+        margin-inline: auto;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      p.lead {
+        margin: 0;
+        color: #475569;
+        max-width: 70ch;
+      }
+
+      .panel {
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        border: 1px solid #d8e0ea;
+        border-radius: 12px;
+        background: #ffffff;
+      }
+
+      .panel h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .panel p {
+        margin: 0;
+        font-size: 13px;
+        color: #475569;
+      }
+
+      canvas {
+        width: 100%;
+        height: 320px;
+        display: block;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #f8fafc;
+        touch-action: none;
+      }
+
+      code {
+        display: block;
+        white-space: pre-wrap;
+        border: 1px solid #d8e0ea;
+        border-radius: 6px;
+        padding: 10px;
+        color: #334155;
+        background: #f8fafc;
+        font-size: 12px;
+      }
+
+      button {
+        justify-self: start;
+        min-height: 32px;
+        padding: 0 12px;
+        border: 1px solid #bdc8d5;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #0f172a;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: #4aa79e;
+        background: #e7f4f2;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Static diagrams, three ways</h1>
+    <p class="lead">
+      The same DiagramModel rendered as a fully static image, a pan-and-zoom viewer, and a live
+      editable whiteboard. Static displays are ideal for docs, dashboards, and generated reports;
+      the editable canvas is the whiteboard experience from the workspace.
+    </p>
+
+    <section class="panel">
+      <h2>1. Static display (DiagramView)</h2>
+      <p>No pointer handling at all. Renders once, re-renders on model changes, exports PNGs.</p>
+      <canvas id="static-canvas" width="1040" height="320"></canvas>
+      <button id="export-static">Export PNG</button>
+      <code>const view = new DiagramView({ canvas, model, layout: new LayeredLayout({ direction: "LR" }) });</code>
+    </section>
+
+    <section class="panel">
+      <h2>2. Read-only viewer (pan &amp; zoom)</h2>
+      <p>Drag to pan, wheel to zoom. Nodes cannot be moved or edited. Click still selects.</p>
+      <canvas id="view-canvas" width="1040" height="320"></canvas>
+      <code>const engine = new LiveDiagramEngine({ canvas, model, interactions: "view" });</code>
+    </section>
+
+    <section class="panel">
+      <h2>3. Editable whiteboard</h2>
+      <p>Full editing: drag nodes, double-click to rename, right-drag reserved, wheel zooms.</p>
+      <canvas id="edit-canvas" width="1040" height="320"></canvas>
+      <code>const engine = new LiveDiagramEngine({ canvas, model, interactions: "edit" });</code>
+    </section>
+
+    <script type="module">
+      import {
+        DiagramModel,
+        DiagramView,
+        LayeredLayout,
+        LiveDiagramEngine,
+        exportCanvasToPNG
+      } from "../src/index.js";
+
+      function buildModel() {
+        const model = new DiagramModel();
+        model.addNode({ id: "ingest", label: "Ingest" });
+        model.addNode({ id: "clean", label: "Clean" });
+        model.addNode({ id: "layout", label: "Layout" });
+        model.addNode({ id: "render", label: "Render" });
+        model.addNode({ id: "export", label: "Export" });
+        model.connectChain(["ingest", "clean", "layout", "render", "export"]);
+        return model;
+      }
+
+      const layout = () => new LayeredLayout({ direction: "LR", layerGap: 190 });
+
+      const staticView = new DiagramView({
+        canvas: document.querySelector("#static-canvas"),
+        model: buildModel(),
+        layout: layout(),
+        padding: 70
+      });
+
+      document.querySelector("#export-static").addEventListener("click", () => {
+        exportCanvasToPNG(staticView.canvas, "flowlib-static.png").catch((error) => {
+          console.warn(error);
+        });
+      });
+
+      const viewer = new LiveDiagramEngine({
+        canvas: document.querySelector("#view-canvas"),
+        model: buildModel(),
+        layout: layout(),
+        interactions: "view"
+      });
+      viewer.applyLayout();
+      viewer.start();
+
+      const editor = new LiveDiagramEngine({
+        canvas: document.querySelector("#edit-canvas"),
+        model: buildModel(),
+        layout: layout(),
+        interactions: "edit"
+      });
+      editor.applyLayout();
+      editor.start();
+      editor.on("node:doubleclick", ({ node }) => editor.beginInlineEdit(node.id));
+    </script>
+  </body>
+</html>
