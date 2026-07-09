@@ -1,5 +1,7 @@
 # Flowlib API Reference
 
+The exhaustive module-by-module reference. New to Flowlib? Start with [Getting Started](getting-started.md), the [tutorials](README.md#tutorials), or the [guides](README.md#guides).
+
 Flowlib is published as dependency-free ES modules. Import from the package root for the full surface, or use subpath exports when you want a smaller boundary.
 
 ```js
@@ -237,17 +239,38 @@ These nodes re-project their 3D points every update, so camera movement immediat
 
 ## Animation
 
+See the [Animation guide](guides/animation.md) for workflow-oriented coverage.
+
 `Timeline`
 
-- `new Timeline({ autoplay = false, loop = false, rate = 1, time = 0 })`
-- `add(tween, at)`, `to(target, properties, options)`, `sequence(items, options)`
-- `play()`, `pause()`, `seek(time)`, `step(dt)`, `reset()`
-- Emits `play`, `pause`, `seek`, and `complete`.
+- `new Timeline({ autoplay = false, loop = false, repeat = 0, yoyo = false, rate = 1, time = 0 })`
+  - `repeat` counts extra passes (`Infinity` allowed); `loop: true` is shorthand for infinite repeat; `yoyo` alternates direction each pass.
+- Building: `add(tween, at)`, `to(target, properties, options)`, `fromTo(target, fromProps, toProps, options)`, `sequence(items, options)`, `stagger(targets, properties, { each, from, ...options })`, `call(fn, at)`, `addLabel(name, at)`, `labelTime(name)`
+- Position parameters — every `at` accepts: seconds, `"+=n"` / `"-=n"` (relative to duration), `"<"` / `">"` (start/end of the last-added animation), or a label name. `resolvePosition(at)` exposes the resolver.
+- Playback: `play()`, `pause()`, `stop()`, `seek(time)`, `step(dt)`, `reset()`, `reverse()`, `timeScale(value?)`, `progress` (get/set 0..1)
+- Emits `play`, `pause`, `seek`, `loop` (`{ iteration }`), and `complete`.
 
 `Tween`
 
-- Interpolates one property path on a target.
-- Usually created through `timeline.to(...)`.
+- Interpolates one property path on a target (`"position.x"`, `"style.stroke"`, …).
+- Usually created through `timeline.to(...)`. Options: `duration`, `delay`, `ease`, `from`, `onStart`, `onUpdate`, `onComplete`.
+- Plain-object values merge into `Vec2`/`Vec3`/`Color`-like targets instead of replacing them.
+
+`AnimationClip` / `KeyframeTrack` — serializable keyframe animation:
+
+- `new AnimationClip({ name, tracks })`
+- `setKeyframe(targetId, property, time, value, ease)`, `removeKeyframe(targetId, property, time)`, `clear()`, `track(targetId, property)`
+- `duration`, `isEmpty`
+- `buildTimeline(resolveTarget, options)`, `applyTo(timeline, resolveTarget, { offset, tag })`, `sample(time, resolveTarget)`
+- `toJSON()` / `AnimationClip.fromJSON(data)` — JSON round-trip; the workspace's clip save/load uses this format.
+- `KeyframeTrack`: `setKeyframe(time, value, ease)`, `removeKeyframe(time)`, `sample(time)`, `duration`, `toJSON()` / `fromJSON`.
+
+```js
+const clip = new AnimationClip({ name: "intro" });
+clip.setKeyframe("node:start", "position", 0, { x: 0, y: 0 });
+clip.setKeyframe("node:start", "position", 1, { x: 160, y: 0 }, "outQuart");
+const timeline = clip.buildTimeline((id) => model.nodes.get(id.slice(5)) || null, { autoplay: true });
+```
 
 `ValueTracker`
 
@@ -255,21 +278,22 @@ These nodes re-project their 3D points every update, so camera movement immediat
 
 Easing:
 
-- `Easings`
-- `resolveEase(ease)`
+- `Easings` — `linear`, `spring`, and `in/out/inOut` variants of `Sine`, `Quad`, `Cubic`, `Quart`, `Quint`, `Expo`, `Circ`, `Back`, `Elastic`, `Bounce` (e.g. `outBounce`, `inOutQuint`).
+- `steps(count)` and `cubicBezierEase(x1, y1, x2, y2)` factories.
+- `resolveEase(ease)` — name, function, or falsy (linear).
 
 Preset helpers:
 
 - Motion and visibility: `moveTo`, `shift`, `fadeIn`, `fadeOut`, `scaleTo`
 - Shapes: `growToSize`, `growFromCenter`, `rotateTo`, `rotateBy`, `pulse`, `indicate`
-- Paths: `traceBetween`, `moveAlongPath`
+- Paths and reveals: `traceBetween`, `moveAlongPath`, `drawLine` (dash-offset draw-on), `cascadeIn` (staggered node entrances)
 - 2D camera: `cameraPanTo`, `cameraZoomTo`, `cameraRotateTo`, `cameraTo`
 - 3D camera: `camera3DTo`, `camera3DOrbitTo`, `camera3DOrbitBy`, `camera3DOrbit`, `camera3DPanBy`, `camera3DDollyTo`, `camera3DDollyBy`
 
 ```js
-const timeline = new Timeline({ autoplay: true, loop: true });
+const timeline = new Timeline({ autoplay: true, repeat: Infinity, yoyo: true });
 pulse(timeline, node, { at: 0, duration: 0.35, scale: 1.18 });
-rotateBy(timeline, node, Math.PI / 2, { at: 0.4, duration: 0.6 });
+drawLine(timeline, edge, { at: "+=0.2", duration: 0.7 });
 camera3DOrbitBy(timeline, camera3D, { yaw: Math.PI * 2 }, { duration: 6, ease: "linear" });
 ```
 
@@ -388,7 +412,7 @@ Diagram factories:
 
 `createVennDiagram` and `createQuadrantChart` return `Scene` instances. Most other diagram factories return `DiagramModel` instances.
 
-## Live Engine
+## Live Engine and Static Views
 
 `LiveDiagramEngine` binds a `DiagramModel` to a canvas with pointer editing, camera controls, inline labels, and connection workflows.
 
@@ -397,18 +421,26 @@ const engine = new LiveDiagramEngine({
   canvas,
   model,
   layout: new GraphLayout({ name: "spring" }),
-  background: "#f8fafc"
+  background: "#f8fafc",
+  interactions: "edit"   // "edit" | "view" | "none"
 });
 
 engine.start();
 ```
+
+Interaction modes:
+
+- `"edit"` (default) — full whiteboard: drag nodes, pan, zoom, select, inline edit, connection tools.
+- `"view"` — pan, zoom, hover, click/selection events; no pointer-driven editing (dragging over a node pans the camera). `readonly: true` maps here for compatibility.
+- `"none"` — pointer input ignored entirely; the render loop and timeline keep running.
+- `setInteractions(mode)` switches at runtime and emits `interactions:change`.
 
 Important methods:
 
 - Lifecycle: `start()`, `stop()`, `destroy()`, `render()`, `sync()`
 - Layout: `applyLayout(layout)`, `animateLayout(layout, options)`, `fit(padding)`
 - Model shortcuts: `addNode`, `addEdge`, `connectNodes`, `disconnectNodes`, `reconnectEdge`, `setModel`
-- Tools: `setTool("select" | "connect")`
+- Tools: `setTool("select" | "connect")`, `setInteractions("edit" | "view" | "none")`
 - Selection: `selectNode(id, options)`, `clearSelection()`
 - Inline editing: `beginInlineEdit(nodeId, options)`, `commitInlineEdit(options)`, `cancelInlineEdit()`
 - Connections: `startConnection(sourceId, options)`, `completeConnection(targetId, options)`, `cancelConnection(options)`
@@ -416,11 +448,30 @@ Important methods:
 
 Events:
 
-- Selection and tools: `selection:change`, `tool:change`
+- Selection and tools: `selection:change`, `tool:change`, `interactions:change`
 - Node interaction: `node:click`, `node:doubleclick`, `node:contextmenu`, `node:dragstart`, `node:drag`, `node:dragend`
 - Canvas interaction: `canvas:click`, `canvas:doubleclick`, `canvas:contextmenu`
 - Inline editing: `node:editstart`, `node:editcommit`, `node:editcancel`
 - Connections: `connection:start`, `connection:create`, `connection:reconnect`, `connection:cancel`
+
+`DiagramView` — static diagram display (no pointer handling; see [Static Diagrams](tutorials/04-static-diagrams-and-embedding.md)):
+
+```js
+const view = new DiagramView({
+  canvas,
+  model,                    // or scene: a prebuilt Scene
+  layout,                   // optional; applied once at construction
+  padding: 60,              // fit-to-content padding
+  background: "#f8fafc",
+  fit: true,                // fit camera on construction
+  watch: true,              // re-render on model change events
+  interactive: false        // true / "pan-zoom" opts into pan + wheel zoom only
+});
+```
+
+- `render()`, `fit(padding)`, `setModel(model, options)`, `destroy()`
+- `toDataURL(type, quality)`, `toBlob({ type, quality })`
+- `renderStaticDiagram(canvas, modelOrOptions)` — one-call convenience; returns the `DiagramView`.
 
 ## Renderers
 
@@ -488,6 +539,16 @@ const recorder = new CanvasVideoRecorder(canvas, { fps: 30 }).start();
 // run an interaction or animation
 const blob = await recorder.stop();
 downloadBlob(blob, "capture.webm");
+```
+
+## Image Export
+
+- `canvasToDataURL(canvas, { type = "image/png", quality })`
+- `canvasToBlob(canvas, { type = "image/png", quality })` — resolves a `Blob`
+- `exportCanvasToPNG(canvas, filename = "flowlib.png", options)` — captures and downloads
+
+```js
+await exportCanvasToPNG(canvas, "diagram.png");
 ```
 
 ## Examples
