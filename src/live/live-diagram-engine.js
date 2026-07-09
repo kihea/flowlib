@@ -46,6 +46,7 @@ export class LiveDiagramEngine extends EventEmitter {
     this.pendingConnection = null;
     this.inlineEditor = null;
     this.readonly = options.readonly || false;
+    this.interactions = options.interactions || (this.readonly ? "view" : "edit");
     this.pointerDisposers = [];
     this.#bindModel();
     this.#bindPointerEvents();
@@ -167,6 +168,22 @@ export class LiveDiagramEngine extends EventEmitter {
     this.#syncDiagram();
     if (options.fit !== false) this.fit();
     this.render();
+    return this;
+  }
+
+  setInteractions(mode) {
+    if (this.interactions === mode) return this;
+    if (!["edit", "view", "none"].includes(mode)) {
+      throw new Error(`Unknown interactions mode "${mode}". Use "edit", "view", or "none".`);
+    }
+    this.interactions = mode;
+    if (mode !== "edit") {
+      this.cancelConnection({ silent: true });
+      this.cancelInlineEdit();
+      this.setTool("select");
+    }
+    this.drag = null;
+    this.emit("interactions:change", { interactions: mode });
     return this;
   }
 
@@ -443,8 +460,21 @@ export class LiveDiagramEngine extends EventEmitter {
     };
   }
 
+  #caps() {
+    if (this.interactions === "none") {
+      return { pointer: false, pan: false, zoom: false, select: false, drag: false, edit: false };
+    }
+    if (this.interactions === "view") {
+      return { pointer: true, pan: true, zoom: true, select: true, drag: false, edit: false };
+    }
+    const editable = !this.readonly;
+    return { pointer: true, pan: true, zoom: true, select: true, drag: editable, edit: editable };
+  }
+
   #onPointerDown(event) {
     if (event.button === 2) return;
+    const caps = this.#caps();
+    if (!caps.pointer) return;
     const screen = this.#eventPoint(event);
     const world = this.screenToWorld(screen);
     const node = this.hitTest(world);
@@ -460,7 +490,7 @@ export class LiveDiagramEngine extends EventEmitter {
       return;
     }
 
-    if (this.tool === "connect" && node && !this.readonly) {
+    if (this.tool === "connect" && node && caps.edit) {
       this.selectNode(node.id, { additive: event.shiftKey });
       this.startConnection(node.id);
       this.drag = {
@@ -473,7 +503,7 @@ export class LiveDiagramEngine extends EventEmitter {
       return;
     }
 
-    if (node && !this.readonly) {
+    if (node && caps.drag) {
       this.selectNode(node.id, { additive: event.shiftKey });
       this.drag = {
         mode: "node",
@@ -484,7 +514,16 @@ export class LiveDiagramEngine extends EventEmitter {
         moved: false
       };
       this.emit("node:dragstart", { node, screen, world, nativeEvent: event });
-    } else {
+    } else if (node && caps.select) {
+      this.selectNode(node.id, { additive: event.shiftKey });
+      this.drag = {
+        mode: "click",
+        node,
+        startScreen: screen,
+        startCamera: this.scene.camera.position.clone(),
+        moved: false
+      };
+    } else if (caps.pan) {
       this.clearSelection();
       this.drag = {
         mode: "pan",
@@ -497,6 +536,7 @@ export class LiveDiagramEngine extends EventEmitter {
   }
 
   #onPointerMove(event) {
+    if (!this.#caps().pointer) return;
     const screen = this.#eventPoint(event);
     const world = this.screenToWorld(screen);
     const hovered = this.hitTest(world);
@@ -517,7 +557,7 @@ export class LiveDiagramEngine extends EventEmitter {
       this.drag.node.position.copy(this.drag.startPosition.clone().add(delta));
       this.#syncDiagram();
       this.emit("node:drag", { node: this.drag.node, screen, world, nativeEvent: event });
-    } else {
+    } else if (this.drag.mode === "pan" || (this.drag.mode === "click" && this.#caps().pan)) {
       const delta = Vec2.sub(screen, this.drag.startScreen).scale(-1 / this.scene.camera.zoom);
       this.scene.camera.position.copy(this.drag.startCamera.clone().add(delta));
     }
@@ -525,6 +565,7 @@ export class LiveDiagramEngine extends EventEmitter {
   }
 
   #onPointerUp(event) {
+    if (!this.#caps().pointer) return;
     const screen = this.#eventPoint(event);
     const world = this.screenToWorld(screen);
     const node = this.hitTest(world);
@@ -543,6 +584,8 @@ export class LiveDiagramEngine extends EventEmitter {
       } else {
         this.emit("node:click", { node: drag.node, screen, world, nativeEvent: event });
       }
+    } else if (drag?.mode === "click" && !drag.moved) {
+      this.emit("node:click", { node: drag.node, screen, world, nativeEvent: event });
     } else if (drag?.mode === "pan" && !drag.moved) {
       this.emit("canvas:click", { screen, world, nativeEvent: event });
     }
@@ -550,6 +593,7 @@ export class LiveDiagramEngine extends EventEmitter {
   }
 
   #onDoubleClick(event) {
+    if (!this.#caps().pointer) return;
     const screen = this.#eventPoint(event);
     const world = this.screenToWorld(screen);
     const node = this.hitTest(world);
@@ -561,6 +605,7 @@ export class LiveDiagramEngine extends EventEmitter {
   }
 
   #onContextMenu(event) {
+    if (!this.#caps().pointer) return;
     event.preventDefault();
     const screen = this.#eventPoint(event);
     const world = this.screenToWorld(screen);
@@ -574,6 +619,7 @@ export class LiveDiagramEngine extends EventEmitter {
   }
 
   #onWheel(event) {
+    if (!this.#caps().zoom) return;
     event.preventDefault();
     const factor = event.deltaY < 0 ? 1.1 : 0.9;
     this.scene.camera.zoomAt(this.#eventPoint(event), factor);

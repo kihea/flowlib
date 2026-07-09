@@ -227,3 +227,130 @@ function countingRenderer() {
     }
   };
 }
+
+test("LiveDiagramEngine view mode allows selection but blocks node dragging", () => {
+  const model = new DiagramModel();
+  model.addNode({ id: "a", x: 0, y: 0 });
+  const canvas = fakeCanvas();
+  const engine = new LiveDiagramEngine({ canvas, model, renderer: fakeRenderer(), interactions: "view" });
+  engine.scene.camera.resize(800, 600);
+  engine.scene.camera.position.set(0, 0);
+  engine.scene.camera.zoom = 1;
+
+  let clicked = null;
+  engine.on("node:click", ({ node }) => {
+    clicked = node;
+  });
+
+  dispatch(canvas, "pointerdown", scaledPointerEvent(400, 300));
+  dispatch(canvas, "pointermove", scaledPointerEvent(460, 300));
+  dispatch(canvas, "pointerup", scaledPointerEvent(460, 300));
+
+  assert.equal(model.requireNode("a").position.x, 0, "node must not move in view mode");
+  assert.equal(engine.scene.camera.position.x, -60, "dragging over a node pans the camera in view mode");
+  assert.equal(clicked, null, "a drag gesture is not a click");
+  assert.ok(engine.selection.has("a"), "selection still works in view mode");
+
+  dispatch(canvas, "pointerdown", scaledPointerEvent(460, 300));
+  dispatch(canvas, "pointerup", scaledPointerEvent(460, 300));
+  assert.equal(clicked?.id, "a", "click events still fire in view mode");
+});
+
+test("LiveDiagramEngine none mode ignores pointer input entirely", () => {
+  const model = new DiagramModel();
+  model.addNode({ id: "a", x: 0, y: 0 });
+  const canvas = fakeCanvas();
+  const engine = new LiveDiagramEngine({ canvas, model, renderer: fakeRenderer(), interactions: "none" });
+  engine.scene.camera.resize(800, 600);
+  engine.scene.camera.position.set(0, 0);
+  engine.scene.camera.zoom = 1;
+
+  let clicked = false;
+  engine.on("node:click", () => {
+    clicked = true;
+  });
+
+  dispatch(canvas, "pointerdown", scaledPointerEvent(400, 300));
+  dispatch(canvas, "pointerup", scaledPointerEvent(400, 300));
+
+  assert.equal(clicked, false);
+  assert.equal(engine.selection.size, 0);
+});
+
+test("LiveDiagramEngine setInteractions restores editing", () => {
+  const model = new DiagramModel();
+  model.addNode({ id: "a", x: 0, y: 0 });
+  const canvas = fakeCanvas();
+  const engine = new LiveDiagramEngine({ canvas, model, renderer: fakeRenderer(), interactions: "view" });
+  engine.scene.camera.resize(800, 600);
+  engine.scene.camera.position.set(0, 0);
+  engine.scene.camera.zoom = 1;
+
+  engine.setInteractions("edit");
+  assert.equal(engine.interactions, "edit");
+
+  dispatch(canvas, "pointerdown", scaledPointerEvent(400, 300));
+  dispatch(canvas, "pointermove", scaledPointerEvent(460, 300));
+  dispatch(canvas, "pointerup", scaledPointerEvent(460, 300));
+
+  assert.equal(model.requireNode("a").position.x, 60, "node dragging works again in edit mode");
+});
+
+test("LiveDiagramEngine readonly option maps to view interactions", () => {
+  const model = new DiagramModel();
+  const engine = new LiveDiagramEngine({ canvas: fakeCanvas(), model, renderer: fakeRenderer(), readonly: true });
+  assert.equal(engine.interactions, "view");
+});
+
+test("DiagramView renders a model statically without pointer listeners", async () => {
+  const { DiagramView } = await import("../src/index.js");
+  const model = new DiagramModel();
+  model.addNode({ id: "a", label: "A" });
+  model.addNode({ id: "b", label: "B" });
+  model.connect("a", "b", { directed: true });
+  const canvas = fakeCanvas();
+  const renderer = countingRenderer();
+  const view = new DiagramView({ canvas, model, renderer });
+
+  assert.equal(canvas.listeners.length, 0, "static view must not attach pointer listeners");
+  assert.ok(renderer.renders >= 1, "constructing a view renders once");
+
+  const before = renderer.renders;
+  model.addNode({ id: "c", label: "C" });
+  assert.ok(renderer.renders > before, "model changes re-render the view");
+
+  view.destroy();
+  const after = renderer.renders;
+  model.addNode({ id: "d" });
+  assert.equal(renderer.renders, after, "destroyed views stop watching the model");
+});
+
+test("renderStaticDiagram is a one-call static presenter", async () => {
+  const { renderStaticDiagram } = await import("../src/index.js");
+  const model = new DiagramModel();
+  model.addNode({ id: "a" });
+  const canvas = fakeCanvas();
+  const view = renderStaticDiagram(canvas, { model, renderer: countingRenderer() });
+  assert.ok(view.renderer.renders >= 1);
+  assert.equal(canvas.listeners.length, 0);
+});
+
+test("DiagramView pan-zoom mode attaches listeners and pans the camera", async () => {
+  const { DiagramView } = await import("../src/index.js");
+  const model = new DiagramModel();
+  model.addNode({ id: "a", x: 0, y: 0 });
+  const canvas = fakeCanvas();
+  const view = new DiagramView({ canvas, model, renderer: countingRenderer(), interactive: true, fit: false });
+  view.scene.camera.resize(800, 600);
+  view.scene.camera.position.set(0, 0);
+  view.scene.camera.zoom = 1;
+  assert.ok(canvas.listeners.length > 0);
+
+  dispatch(canvas, "pointerdown", scaledPointerEvent(100, 100));
+  dispatch(canvas, "pointermove", scaledPointerEvent(60, 100));
+  dispatch(canvas, "pointerup", scaledPointerEvent(60, 100));
+  assert.equal(view.scene.camera.position.x, 40, "dragging pans the camera");
+
+  view.destroy();
+  assert.equal(canvas.listeners.length, 0);
+});
