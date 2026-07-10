@@ -18,10 +18,11 @@ export class Canvas2DRenderer {
     return this;
   }
 
-  resize(width = this.canvas.clientWidth || this.canvas.width, height = this.canvas.clientHeight || this.canvas.height) {
+  resize(width, height) {
     const ratio = this.pixelRatio;
-    const displayWidth = Math.max(1, Math.floor(width));
-    const displayHeight = Math.max(1, Math.floor(height));
+    const explicit = width != null || height != null;
+    const displayWidth = Math.max(1, Math.floor(width ?? (this.canvas.clientWidth || this.canvas.width)));
+    const displayHeight = Math.max(1, Math.floor(height ?? (this.canvas.clientHeight || this.canvas.height)));
     const backingWidth = Math.max(1, Math.round(displayWidth * ratio));
     const backingHeight = Math.max(1, Math.round(displayHeight * ratio));
     this.displayWidth = displayWidth;
@@ -29,8 +30,16 @@ export class Canvas2DRenderer {
     if (this.canvas.width !== backingWidth || this.canvas.height !== backingHeight) {
       this.canvas.width = backingWidth;
       this.canvas.height = backingHeight;
-      this.canvas.style.width = `${displayWidth}px`;
-      this.canvas.style.height = `${displayHeight}px`;
+      // Pin the display size with inline styles only when the caller chose the size,
+      // or when the attribute write itself changed the rendered size (an element with
+      // no CSS sizing). Writing measured client sizes back onto CSS-sized canvases
+      // shrinks them by their border/padding on every call.
+      const attributeSized = this.canvas.clientWidth !== 0 &&
+        (this.canvas.clientWidth !== displayWidth || this.canvas.clientHeight !== displayHeight);
+      if (explicit || attributeSized) {
+        this.canvas.style.width = `${displayWidth}px`;
+        this.canvas.style.height = `${displayHeight}px`;
+      }
     }
     return this;
   }
