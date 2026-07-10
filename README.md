@@ -1,8 +1,6 @@
 # Flowlib
 
-**A dependency-free JavaScript engine for diagrams, mathematical scenes, and Manim-style animation — from static displays to live, embeddable whiteboards.**
-
-One model, every surface: render a diagram as a static image in your docs, a pan-and-zoom viewer in a dashboard, or a fully editable canvas in your app — and animate any of them with a deterministic, keyframe-capable timeline.
+**A vibe-coded dependency-free JavaScript engine for diagrams, mathematical scenes, and Manim-style animation — from static displays to live, embeddable whiteboards.**
 
 ```js
 import { DiagramModel, LayeredLayout, LiveDiagramEngine } from "@flowlib/engine";
@@ -20,7 +18,7 @@ engine.start();
 ## Why Flowlib
 
 - **Zero dependencies.** ES modules, a canvas, and nothing else. No build step required.
-- **Interaction is a dial, not a fork.** `DiagramView` for static displays; `LiveDiagramEngine` with `interactions: "edit" | "view" | "none"` for everything from whiteboards to animated hero graphics — all over the same model.
+- `DiagramView` for static displays; `LiveDiagramEngine` with `interactions: "edit" | "view" | "none"` for everything from whiteboards to animated hero graphics — all over the same model.
 - **A real animation system.** Deterministic timelines with position parameters (`"+=0.5"`, `"<"`, labels), ~30 named easings plus `steps`/`cubicBezierEase` factories, repeat/yoyo/reverse/timeScale, stagger, callbacks — and serializable `AnimationClip` keyframes that round-trip between code and the visual editor.
 - **Manim-inspired, JavaScript-native.** Graph builders, mobjects, value trackers, traced paths, boolean shapes, projected 3D cameras, and a TeX-like math text renderer with bundled Computer Modern fonts.
 - **Ships with an editor.** The workspace is a full authoring environment: presets, live editing, a keyframe panel with easing and clip save/load, camera tools, and WebM/PNG export.
