@@ -9,6 +9,7 @@
     "./core": "./src/core/index.js",
     "./curves": "./src/curves/index.js",
     "./fonts": "./src/fonts/index.js",
+    "./math": "./src/math/index.js",
     "./scene": "./src/scene/index.js",
     "./animation": "./src/animation/index.js",
     "./diagrams": "./src/diagrams/index.js",
@@ -17,6 +18,14 @@
     "./live": "./src/live/index.js",
     "./render": "./src/render/index.js"
   },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "docs/*.md",
+    "docs/guides",
+    "docs/tutorials"
+  ],
   "scripts": {
     "test": "node --test",
     "check": "node --check src/index.js",
@@ -32,6 +41,15 @@
     "visualization"
   ],
   "license": "MIT",
+  "author": "Kihea Adams-Wilson",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kihea/flowlib.git"
+  },
+  "homepage": "https://kihea.github.io/flowlib/",
+  "bugs": {
+    "url": "https://github.com/kihea/flowlib/issues"
+  },
   "engines": {
     "node": ">=20"
   }
