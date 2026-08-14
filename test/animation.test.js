@@ -12,6 +12,31 @@ test("Timeline interpolates numeric properties", () => {
   assert.equal(target.x, 10);
 });
 
+test("Timeline seek rewinds tweens whose window is in the future", () => {
+  const target = { opacity: 0 };
+  const timeline = new Timeline();
+  timeline.to(target, { opacity: 1 }, { duration: 1, ease: "linear", at: 2 });
+  timeline.seek(3);
+  assert.equal(target.opacity, 1);
+  timeline.seek(0.5);
+  assert.equal(target.opacity, 0, "backward seek before the tween's window restores the pre-animation value");
+  timeline.seek(2.5);
+  assert.equal(target.opacity, 0.5, "forward seek after a rewind interpolates again");
+});
+
+test("Timeline backward seek rewinds to the earliest tween's start value per property", () => {
+  const target = { opacity: 0 };
+  const timeline = new Timeline();
+  timeline.to(target, { opacity: 1 }, { duration: 1, ease: "linear", at: 1 }); // fade in
+  timeline.to(target, { opacity: 0 }, { duration: 1, ease: "linear", at: 4 }); // fade out
+  timeline.seek(5); // play everything: faded in, then out
+  assert.equal(target.opacity, 0);
+  timeline.seek(2.5); // between the two windows: should hold the faded-in value
+  assert.equal(target.opacity, 1, "seek between windows lands on the earlier tween's end value");
+  timeline.seek(0); // before everything
+  assert.equal(target.opacity, 0, "seek to start restores the original value, not the fade-out's captured start");
+});
+
 test("Timeline can step while playing", () => {
   const target = { alpha: 0 };
   const timeline = new Timeline({ autoplay: true });

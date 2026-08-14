@@ -223,9 +223,19 @@ function drawDifference(ctx, node) {
   ctx.beginPath();
   appendNodePath(ctx, node.operands[0]);
   ctx.clip();
+  // Subtract each remaining operand with its own complement clip. A single
+  // even-odd fill over all operands re-fills the regions where subtrahends
+  // overlap each other; one clip per subtrahend keeps them all removed.
+  const HUGE = 1e6;
+  for (const operand of node.operands.slice(1)) {
+    ctx.beginPath();
+    ctx.rect(-HUGE, -HUGE, HUGE * 2, HUGE * 2);
+    appendNodePath(ctx, operand);
+    ctx.clip("evenodd");
+  }
   ctx.beginPath();
-  for (const operand of node.operands) appendNodePath(ctx, operand);
-  if (node.style.fill && node.style.fill !== "transparent") ctx.fill("evenodd");
+  appendNodePath(ctx, node.operands[0]);
+  if (node.style.fill && node.style.fill !== "transparent") ctx.fill(node.fillRule || "nonzero");
   if (node.style.differenceStroke === "outer" && node.style.stroke && node.style.stroke !== "transparent" && (node.style.strokeWidth ?? 1) > 0) {
     // Difference shapes are fill-first by default. If a stroke is explicitly
     // requested, draw only the kept outer operand, never the removed cut edge.

@@ -56,6 +56,7 @@ export class Timeline extends EventEmitter {
       tween.endTime = tween.startTime + tween.delay + tween.duration;
     }
     this.tracks.push(tween);
+    this.#order = null;
     this.duration = Math.max(this.duration, tween.endTime);
     this.lastStart = tween.startTime;
     this.lastEnd = tween.endTime;
@@ -156,8 +157,27 @@ export class Timeline extends EventEmitter {
 
   seek(time) {
     this.time = Math.max(0, time);
-    for (const tween of this.tracks) {
+    // Apply tweens in chronological order so a seek fully reconstructs state:
+    // tweens whose window is in the past land on their end values, the active
+    // tween interpolates, and tweens whose window hasn't been reached rewind
+    // their target to the pre-animation value (earliest tween per property
+    // wins the rewind — later ones captured mid-animation values).
+    const touched = new Map();
+    const wasTouched = (tween) => touched.get(tween.target)?.has(tween.property);
+    const touch = (tween) => {
+      if (tween.target === undefined || tween.property === undefined) return;
+      let props = touched.get(tween.target);
+      if (!props) touched.set(tween.target, (props = new Set()));
+      props.add(tween.property);
+    };
+    for (const tween of this.#chronological()) {
+      const begins = (tween.startTime || 0) + (tween.delay || 0);
+      if (this.time < begins && typeof tween.rewind === "function") {
+        if (!wasTouched(tween) && tween.rewind()) touch(tween);
+        continue;
+      }
       tween.seek(this.time);
+      touch(tween);
     }
     for (const entry of this.callbacks) {
       if (!entry.fired && this.time >= entry.time - 1e-9) {
@@ -215,6 +235,17 @@ export class Timeline extends EventEmitter {
     this.iteration = 0;
     this.#rearm();
     return this;
+  }
+
+  #order = null;
+
+  #chronological() {
+    if (!this.#order) {
+      this.#order = [...this.tracks].sort(
+        (a, b) => ((a.startTime || 0) + (a.delay || 0)) - ((b.startTime || 0) + (b.delay || 0))
+      );
+    }
+    return this.#order;
   }
 
   #rearm() {

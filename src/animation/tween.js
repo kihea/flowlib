@@ -46,6 +46,16 @@ export class Tween {
     return true;
   }
 
+  // Restore the target to this tween's captured pre-animation value. Used by
+  // Timeline.seek when scrubbing to a time before this tween's window, so
+  // backward seeks don't leave targets stuck at later values.
+  rewind() {
+    if (!this.started || this.from === undefined) return false;
+    setPath(this.target, this.property, cloneTweenValue(this.from));
+    this.finished = false;
+    return true;
+  }
+
   reset() {
     this.started = false;
     this.finished = false;
