@@ -2,6 +2,14 @@
 
 **A vibe-coded dependency-free JavaScript engine for diagrams, mathematical scenes, and Manim-style animation — from static displays to live, embeddable whiteboards.**
 
+## Try it
+
+Live in your browser, no install:
+
+- **[Workspace](https://kihea.github.io/flowlib/examples/workspace.html)** — the full authoring environment
+- [Live flowchart](https://kihea.github.io/flowlib/examples/live-flowchart.html) · [Animated state machine](https://kihea.github.io/flowlib/examples/animated-state-machine.html) · [Diagram types](https://kihea.github.io/flowlib/examples/diagram-types.html)
+- [Graph layouts](https://kihea.github.io/flowlib/examples/graph-layouts.html) · [Function graph](https://kihea.github.io/flowlib/examples/function-graph.html) · [Static diagram](https://kihea.github.io/flowlib/examples/static-diagram.html)
+
 ```js
 import { DiagramModel, LayeredLayout, LiveDiagramEngine } from "@flowlib/engine";
 
